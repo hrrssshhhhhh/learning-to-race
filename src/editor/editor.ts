@@ -5,6 +5,12 @@ import { makeRng } from '../sim/rng';
 import { DEFAULT_TRACK } from '../sim/defaultTrack';
 
 export const EDITOR_METERS_PER_PX = 2;
+/** Scale so a 90%-of-canvas ellipse is ~3500 m, inside the track length limit (Ramanujan perimeter). */
+export function metersPerPxFor(w: number, h: number): number {
+  const a = 0.45 * w, b = 0.45 * h;
+  const per = Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
+  return per > 0 ? 3500 / per : EDITOR_METERS_PER_PX;
+}
 const EPSILON_M = 6, MAX_POINTS = 40;
 
 const MESSAGES: Record<TrackError, string> = {
@@ -53,6 +59,7 @@ export class Editor {
   private msg = document.createElement('p');
   private stroke: Vec2[] = [];            // what is shown, css px
   private loaded: Vec2[] | null = null;   // meters, when a random/default track is shown instead of a drawn stroke
+  private mpp = EDITOR_METERS_PER_PX;
   private fit = { k: 1 / EDITOR_METERS_PER_PX, ox: 0, oy: 0 }; // meters -> px
   private drawing = false;
   private w = 0; private h = 0;
@@ -62,6 +69,7 @@ export class Editor {
   constructor(private canvas: HTMLCanvasElement, private onRace: (control: Vec2[]) => void) {
     this.ctx = canvas.getContext('2d')!;
     canvas.style.touchAction = 'none';
+    canvas.setAttribute('aria-label', 'Track drawing area: draw a closed loop with the mouse or touch');
     this.panel.className = 'editor-panel';
     this.panel.innerHTML = `<button type="button" data-a="race">Race</button>
       <button type="button" data-a="random">Random track</button>
@@ -80,10 +88,13 @@ export class Editor {
       else if (a === 'clear') this.clear();
       else if (a === 'cancel') this.close();
     });
+    this.panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close(); });
+    canvas.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close(); });
     canvas.addEventListener('pointerdown', (e) => {
+      if (this.drawing) return;
       canvas.setPointerCapture(e.pointerId);
       this.drawing = true; this.loaded = null; this.msg.textContent = '';
-      this.fit = { k: 1 / EDITOR_METERS_PER_PX, ox: 0, oy: 0 };
+      this.fit = { k: 1 / this.mpp, ox: 0, oy: 0 };
       this.stroke = [this.pt(e)]; this.draw();
     });
     canvas.addEventListener('pointermove', (e) => {
@@ -103,19 +114,25 @@ export class Editor {
     this.opened = true; this.setVisible(true);
     window.addEventListener('resize', this.resizeHandler);
     this.layout(); this.clear();
+    this.canvas.tabIndex = -1;
+    this.panel.querySelector('button')!.focus();
+    for (const el of this.others()) el.inert = true;
   }
   close(): void {
     this.opened = false; this.setVisible(false);
     window.removeEventListener('resize', this.resizeHandler);
+    for (const el of this.others()) el.inert = false;
   }
+
+  private others(): HTMLElement[] { return [...(this.canvas.parentElement?.children ?? [])].filter((e) => e !== this.canvas && e !== this.panel) as HTMLElement[]; }
 
   private setVisible(v: boolean): void { this.canvas.hidden = this.panel.hidden = !v; }
   private pt(e: PointerEvent): Vec2 { const r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
-  private control(): Vec2[] { return this.loaded ?? strokeToControlPoints(this.stroke, EDITOR_METERS_PER_PX); }
+  private control(): Vec2[] { return this.loaded ?? strokeToControlPoints(this.stroke, this.mpp); }
 
   private clear(): void {
     this.stroke = []; this.loaded = null; this.msg.textContent = '';
-    this.fit = { k: 1 / EDITOR_METERS_PER_PX, ox: 0, oy: 0 }; this.draw();
+    this.fit = { k: 1 / this.mpp, ox: 0, oy: 0 }; this.draw();
   }
 
   /** Show a track given in meters, scaled and centred into the canvas; control points stay in meters. */
@@ -144,6 +161,10 @@ export class Editor {
     this.w = this.canvas.clientWidth; this.h = this.canvas.clientHeight;
     this.canvas.width = Math.round(this.w * dpr); this.canvas.height = Math.round(this.h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const mpp = metersPerPxFor(this.w, this.h);
+    if (mpp !== this.mpp && !this.loaded) { this.stroke = []; this.msg.textContent = ''; } // a drawn stroke can't be reinterpreted at a new scale
+    this.mpp = mpp;
+    if (!this.loaded) this.fit = { k: 1 / this.mpp, ox: 0, oy: 0 };
     if (this.loaded) this.show(this.loaded); else this.draw();
   }
 

@@ -1,4 +1,4 @@
-import { strokeToControlPoints, EDITOR_METERS_PER_PX } from '../../src/editor/editor';
+import { strokeToControlPoints, EDITOR_METERS_PER_PX, metersPerPxFor } from '../../src/editor/editor';
 import { validateTrack } from '../../src/sim/track';
 
 const ellipse = (n: number, close = false) =>
@@ -27,4 +27,16 @@ test('degenerate input never throws', () => {
 test('huge noisy stroke is capped at 40 points', () => {
   const stroke = Array.from({ length: 2000 }, (_, i) => ({ x: i * 0.5, y: Math.sin(i) * 80 }));
   expect(strokeToControlPoints(stroke, 2).length).toBeLessThanOrEqual(40);
+});
+
+const ell = (w: number, h: number, f: number, n = 300) =>
+  Array.from({ length: n }, (_, i) => ({ x: w / 2 + f * w / 2 * Math.cos((2 * Math.PI * i) / n), y: h / 2 + f * h / 2 * Math.sin((2 * Math.PI * i) / n) }));
+test('90% ellipse on 1200x800 is valid at the computed scale', () => {
+  const mpp = metersPerPxFor(1200, 800);
+  expect(mpp).toBeGreaterThan(1.1); expect(mpp).toBeLessThan(1.3);
+  expect(validateTrack(strokeToControlPoints(ell(1200, 800, 0.9), mpp))).toEqual({ ok: true });
+});
+test('tiny loop is still too-short', () => {
+  const r = validateTrack(strokeToControlPoints(ell(1200, 800, 0.1), metersPerPxFor(1200, 800)));
+  expect(r).toEqual({ ok: false, reason: 'too-short' });
 });
