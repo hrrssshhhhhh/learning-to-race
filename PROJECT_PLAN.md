@@ -42,11 +42,11 @@ Detailed documents:
 
 ### Week 1: brain and physics (ends with a working 2D version)
 
-- [ ] **1. Project setup.** Vite + TypeScript, tests, random number generator, vector math.
-- [ ] **2. Tracks.** Turn drawn points into a smooth track with walls and checkpoints. Reject bad drawings: too small, crossing itself, corners too tight.
-- [ ] **3. Random track generator.** Endless valid F1-style tracks, used to train the generalist.
-- [ ] **4. Car and bike physics.** Accelerate, brake, steer; bikes are quicker but grip less.
-- [ ] **5. Sensors.** 7 distance rays, the vehicle's "eyes".
+- [x] **1. Project setup.** Vite + TypeScript, tests, random number generator, vector math.
+- [x] **2. Tracks.** Turn drawn points into a smooth track with walls and checkpoints. Reject bad drawings: too small, crossing itself, corners too tight.
+- [x] **3. Random track generator.** Endless valid F1-style tracks, used to train the generalist.
+- [x] **4. Car and bike physics.** Accelerate, brake, steer; bikes are quicker but grip less.
+- [x] **5. Sensors.** 7 distance rays, the vehicle's "eyes".
 - [ ] **6. Scrape vs crash.** Angle and speed of impact decide whether it scrapes or crashes; a damage meter.
 - [ ] **7. Neural network**, from scratch: rays + speed in, steering + throttle out.
 - [ ] **8. Genetic algorithm**, from scratch: keep the best, mix, mutate.
