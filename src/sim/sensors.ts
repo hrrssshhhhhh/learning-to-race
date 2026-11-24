@@ -52,10 +52,11 @@ function forNear(g: Grid, p: Vec2, radius: number, f: (id: number) => void): voi
     }
 }
 
-/** Wall segments (inner and outer) in the grid cells around p; also used by wall contact (Task 6). Deduped. */
-export function wallSegmentsNear(track: Track, p: Vec2, radius: number): Iterable<[Vec2, Vec2]> {
-  const g = gridFor(track), seen = new Set<number>(), out: [Vec2, Vec2][] = [];
-  forNear(g, p, radius, (id) => { if (!seen.has(id)) { seen.add(id); out.push(segOf(g, id)); } });
+/** Wall segments [a, b, isInner] in the grid cells around p; also used by wall contact (Task 6). Deduped.
+ *  isInner tells contact which side is the track: right of a->b for the inner wall, left for the outer (CCW track). */
+export function wallSegmentsNear(track: Track, p: Vec2, radius: number): Iterable<[Vec2, Vec2, boolean]> {
+  const g = gridFor(track), seen = new Set<number>(), out: [Vec2, Vec2, boolean][] = [];
+  forNear(g, p, radius, (id) => { if (!seen.has(id)) { seen.add(id); out.push([...segOf(g, id), id < g.n]); } });
   return out;
 }
 

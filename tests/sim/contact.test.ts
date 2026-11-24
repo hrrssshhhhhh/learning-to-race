@@ -1,5 +1,5 @@
 import { buildTrack, TRACK_WIDTH, type Track } from '../../src/sim/track';
-import { newVehicleState, CAR, BIKE } from '../../src/sim/vehicle';
+import { newVehicleState, stepVehicle, CAR, BIKE } from '../../src/sim/vehicle';
 import { resolveWallContact, DAMAGE_LIMIT } from '../../src/sim/contact';
 import { add, scale } from '../../src/sim/vec';
 
@@ -56,4 +56,22 @@ test('overlapping but heading away from the wall is not a crash', () => {
 test('near-stationary steep touch is a scrape, not a crash', () => {
   const tr = t(); const s = nearWall(tr, 60, 1);
   expect(resolveWallContact(s, CAR, tr)!.kind).toBe('scrape'); expect(s.alive).toBe(true);
+});
+// Lateral offset from the centreline of the straight start section (+ = towards the inner wall).
+const lateral = (tr: Track, p: { x: number; y: number }) =>
+  (p.x - tr.start.pos.x) * -Math.sin(tr.start.heading) + (p.y - tr.start.pos.y) * Math.cos(tr.start.heading);
+test('fast steep hit cannot tunnel through the wall (bike, 55 m/s, 80 deg, 0.71 m away)', () => {
+  const tr = t(); const s = nearWall(tr, 80, 55, TRACK_WIDTH / 2 - 0.71);
+  for (let i = 0; i < 3 && s.alive; i++) { stepVehicle(s, BIKE, { steer: 0, throttle: 1 }, 1 / 60); resolveWallContact(s, BIKE, tr); }
+  expect(!s.alive || lateral(tr, s.pos) <= TRACK_WIDTH / 2).toBe(true);
+});
+test('invariant: no alive vehicle ends a contact step outside the track', () => {
+  const tr = t();
+  for (const spec of [CAR, BIKE]) for (let deg = 5; deg <= 90; deg += 5) for (const speed of [5, 20, 40, 55]) for (let k = 0; k < 10; k++) {
+    const s = nearWall(tr, deg, speed, TRACK_WIDTH / 2 - spec.width / 2 - 0.05 * k);
+    for (let i = 0; i < 5 && s.alive; i++) {
+      stepVehicle(s, spec, { steer: 0, throttle: 1 }, 1 / 60); resolveWallContact(s, spec, tr);
+      if (s.alive) expect(Math.abs(lateral(tr, s.pos))).toBeLessThanOrEqual(TRACK_WIDTH / 2);
+    }
+  }
 });

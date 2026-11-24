@@ -6,8 +6,8 @@ export interface GAParams { eliteCount: number; tournamentSize: number; mutation
 // from the few brains that reached the furthest corner, which is what gets a first lap within ~5 generations.
 export const DEFAULT_GA: GAParams = { eliteCount: 5, tournamentSize: 20, mutationRate: 0.3, mutationStd: 0.3 };
 
-/** Tournament: sample k at random, best wins. Favours good brains but weak ones still get a chance,
- *  which keeps diversity (pure "top N only" converges too early). Tuning k tunes selection pressure. */
+/** Tournament: sample k at random, best wins. Tuning k tunes selection pressure. With DEFAULT_GA's k = 20 of 100
+ *  the pressure is high on purpose: almost every parent is a top brain. Diversity comes from the 0.3 mutation rate. */
 function tournament(order: number[], fitness: number[], k: number, rng: Rng): number {
   let best = order[Math.floor(rng() * order.length)];
   for (let i = 1; i < k; i++) {

@@ -2,7 +2,7 @@ import type { Vec2 } from './vec';
 import { segmentIntersect } from './vec';
 import type { Track } from './track';
 import { makeRng, type Rng } from './rng';
-import { SPECS, newVehicleState, stepVehicle, type VehicleKind, type VehicleState } from './vehicle';
+import { SPECS, newVehicleState, stepVehicle, type Controls, type VehicleKind, type VehicleState } from './vehicle';
 import { sensorInputs } from './sensors';
 import { resolveWallContact, type ContactEvent } from './contact';
 import { LAYERS, createBrain, forward, type Brain } from '../ml/nn';
@@ -95,7 +95,9 @@ export class World {
   populations: Population[] = [];
   tick = 0;
   private rng: Rng;
-  private prev: Vec2 = { x: 0, y: 0 }; // reused each vehicle step: no per-step allocation
+  // Reused every vehicle step. sensorInputs and forward still return fresh arrays (their APIs); the rest is allocation-free.
+  private prev: Vec2 = { x: 0, y: 0 };
+  private controls: Controls = { steer: 0, throttle: 0 };
 
   constructor(public track: Track, opts: WorldOptions) {
     this.rng = makeRng(opts.seed);
@@ -123,7 +125,8 @@ export class World {
         if (!v.alive) continue;
         const out = forward(pop.brains[i], sensorInputs(v, spec, this.track));
         this.prev.x = v.pos.x; this.prev.y = v.pos.y;
-        stepVehicle(v, spec, { steer: out[0], throttle: out[1] }, DT);
+        this.controls.steer = out[0]; this.controls.throttle = out[1];
+        stepVehicle(v, spec, this.controls, DT);
         const ev = resolveWallContact(v, spec, this.track);
         if (ev) events.push(ev);
         v.ticks++;

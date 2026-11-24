@@ -11,6 +11,7 @@ export const SCRAPE_MAX_ANGLE = 30; // degrees between heading and wall tangent
 export const SCRAPE_MAX_NORMAL_SPEED = 8; // m/s into the wall
 export const DAMAGE_LIMIT = 1;
 const SCRAPE_SPEED_LOSS = 0.85;
+const MAX_TUNNEL = 1; // m; > one tick of travel at top speed (55/60), so a centre this far past a wall still counts as in it
 const CRAWL_SPEED = 2; // m/s; below this a steep touch is a nudge, not a crash
 const BODY_MARGIN = 0.3; // m, padding around half-width so the body circle is slightly generous
 const SCRAPE_MAX_RAD = (SCRAPE_MAX_ANGLE * Math.PI) / 180;
@@ -26,17 +27,27 @@ export function resolveWallContact(s: VehicleState, spec: VehicleSpec, track: Tr
   const r = spec.width / 2 + BODY_MARGIN, px = s.pos.x, py = s.pos.y;
 
   let bestDepth = 0, bx = 0, by = 0, btx = 0, bty = 0;
-  for (const [a, b] of wallSegmentsNear(track, s.pos, r)) {
+  for (const [a, b, isInner] of wallSegmentsNear(track, s.pos, r + MAX_TUNNEL)) {
     const sx = b.x - a.x, sy = b.y - a.y, l2 = sx * sx + sy * sy;
     if (l2 === 0) continue;
-    const t = Math.max(0, Math.min(1, ((px - a.x) * sx + (py - a.y) * sy) / l2));
-    const dx = px - (a.x + sx * t), dy = py - (a.y + sy * t), d = Math.hypot(dx, dy);
-    if (r - d <= bestDepth) continue;
-    bestDepth = r - d;
     const l = Math.sqrt(l2);
-    btx = sx / l; bty = sy / l;
-    // Normal points from wall to vehicle. If the centre is exactly on the wall, fall back to the segment's perpendicular.
-    if (d > 1e-9) { bx = dx / d; by = dy / d; } else { bx = -bty; by = btx; }
+    const tRaw = ((px - a.x) * sx + (py - a.y) * sy) / l2;
+    let depth: number, nx: number, ny: number;
+    if (tRaw >= 0 && tRaw <= 1) {
+      // Alongside the segment: use the signed distance to the track side, so a centre that crossed the wall line
+      // within one tick is seen as deep in the wall (and pushed back in), not as "on the far side, moving away".
+      nx = isInner ? sy / l : -sy / l; ny = isInner ? -sx / l : sx / l;
+      const sd = (px - a.x) * nx + (py - a.y) * ny;
+      if (sd >= r || sd < -MAX_TUNNEL) continue;
+      depth = r - sd;
+    } else {
+      // Past an end: touching the joint itself; the radial direction is the only sensible normal there.
+      const t = tRaw < 0 ? 0 : 1, dx = px - (a.x + sx * t), dy = py - (a.y + sy * t), d = Math.hypot(dx, dy);
+      if (d >= r || d < 1e-9) continue;
+      depth = r - d; nx = dx / d; ny = dy / d;
+    }
+    if (depth <= bestDepth) continue;
+    bestDepth = depth; bx = nx; by = ny; btx = sx / l; bty = sy / l;
   }
   if (bestDepth === 0) return null;
 

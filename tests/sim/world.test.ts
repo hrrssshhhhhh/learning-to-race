@@ -1,7 +1,7 @@
 import { World, fitness, advanceCheckpoints, DT, STALL_SECONDS } from '../../src/sim/world';
 import { buildTrack } from '../../src/sim/track';
 import { DEFAULT_TRACK } from '../../src/sim/defaultTrack';
-import { CAR, stepVehicle } from '../../src/sim/vehicle';
+import { CAR, newVehicleState, stepVehicle } from '../../src/sim/vehicle';
 import { createBrain, LAYERS } from '../../src/ml/nn';
 import { makeRng } from '../../src/sim/rng';
 
@@ -29,4 +29,18 @@ test('frozen population never evolves and reports completion rate', () => {
   const p = w.populations[0];
   for (let i = 0; i < 100000 && !w.isAttemptOver(p); i++) w.step();
   expect(p.generation).toBe(0); expect(w.completionRate(p)).toBeGreaterThanOrEqual(0); expect(w.completionRate(p)).toBeLessThanOrEqual(1);
+});
+test('checkpoint crossings count only in the forward direction (no back-and-forth farming)', () => {
+  const tr = buildTrack(DEFAULT_TRACK); const c = tr.checkpoints[1];
+  const m = { x: (c.a.x + c.b.x) / 2, y: (c.a.y + c.b.y) / 2 };
+  const ex = c.a.x - c.b.x, ey = c.a.y - c.b.y, L = Math.hypot(ex, ey), f = { x: ey / L, y: -ex / L }; // track forward
+  const behind = { x: m.x - f.x, y: m.y - f.y }, ahead = { x: m.x + f.x, y: m.y + f.y };
+  const mk = () => { const v = newVehicleState(tr.start); v.nextCheckpoint = 1; return v; };
+  const back = mk(); back.pos = { ...behind }; advanceCheckpoints(back, ahead, tr);
+  expect(back.checkpointsPassed).toBe(0);
+  const fwd = mk(); fwd.pos = { ...ahead }; advanceCheckpoints(fwd, behind, tr);
+  expect(fwd.checkpointsPassed).toBe(1);
+  const osc = mk();
+  for (let i = 0; i < 5; i++) { osc.pos = { ...behind }; advanceCheckpoints(osc, ahead, tr); osc.pos = { ...ahead }; advanceCheckpoints(osc, behind, tr); }
+  expect(osc.checkpointsPassed).toBe(1);
 });
