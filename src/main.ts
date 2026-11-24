@@ -53,7 +53,7 @@ function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; // camera only; the sim is fixed-step
   const events: ContactEvent[] = [];
   if (!editor.isOpen) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
-  scene3d?.effects.add(events); // marks accumulate even while the 2D view is showing
+  scene3d?.effects.add(events, app.view === '3d'); // marks accumulate in 2D too; sparks only while visible
   const w = app.world, car = Math.max(0, w.populations.findIndex((p) => p.kind === 'car'));
   const li = w.leader(w.populations[car]), lead = w.populations[car].vehicles[li];
   // only the visible renderer draws

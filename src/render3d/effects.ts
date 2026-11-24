@@ -45,7 +45,10 @@ export class Effects {
   private pos = new Float32Array(CAP * 3); private vel = new Float32Array(CAP * 3);
   private col = new Float32Array(CAP * 3); private life = new Float32Array(CAP); private maxLife = new Float32Array(CAP);
   private head = 0; private budget = 0;
-  private reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private mq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  private reduced = this.mq?.matches ?? false;
+  private onMq = (e: MediaQueryListEvent) => { this.reduced = e.matches; };
+  private tex: THREE.CanvasTexture;
   private points: THREE.Points;
   // marks
   private counts = new Float32Array(0);
@@ -53,11 +56,17 @@ export class Effects {
   private markDirty = false;
 
   constructor(private scene: THREE.Scene) {
+    this.mq?.addEventListener('change', this.onMq);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; // soft round sprite instead of a square
+    const cx = cv.getContext('2d')!, grad = cx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.6)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = grad; cx.fillRect(0, 0, 32, 32);
+    this.tex = new THREE.CanvasTexture(cv);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     g.setAttribute('color', new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
     this.points = new THREE.Points(g, new THREE.PointsMaterial({
-      size: 0.25, sizeAttenuation: true, vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+      map: this.tex, size: 0.2, sizeAttenuation: true, vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
     }));
     this.points.frustumCulled = false; // positions change every frame; the bounding sphere would be stale
     scene.add(this.points);
@@ -92,25 +101,23 @@ export class Effects {
   }
 
   /** Call once per frame with all events from that frame's steps. Crashes spark but leave no mark (a crash ends the run; the heatmap is about scrapes). */
-  add(events: ContactEvent[]): void {
+  add(events: ContactEvent[], sparks = true): void {
     if (!this.track) return;
     this.budget = MAX_SPAWN_PER_FRAME;
     for (const e of events) {
       if (e.intensity <= 0) continue; // vehicle steering off a wall, not an impact
       const hit = nearestWallPoint(this.track, this.ids, e.pos, FIND_RADIUS);
       if (!hit) continue;
-      if (e.kind === 'crash') this.spawn(hit, 30, 1, 3.5);
+      if (e.kind === 'crash') { if (sparks) this.spawn(hit, 30, 0.6, 1.5, 1); }
       else {
-        this.spawn(hit, 4 + 12 * e.intensity, e.intensity, 1);
+        if (sparks) this.spawn(hit, 4 + 12 * e.intensity, e.intensity, 1, 1);
         this.counts[hit.id]++;
-        const al = darkness(this.counts[hit.id]) * MARK_MAX_ALPHA, c = this.marks!.geometry.attributes.color.array as Float32Array;
-        for (let v = 0; v < 6; v++) c[hit.id * 24 + v * 4 + 3] = al;
         this.markDirty = true;
       }
     }
   }
 
-  private spawn(h: WallHit, count: number, strength: number, up: number): void {
+  private spawn(h: WallHit, count: number, strength: number, up: number, lifeMul: number): void {
     const n = Math.min(this.budget, Math.round(count * (this.reduced ? 0.25 : 1)));
     this.budget -= n;
     const life = this.reduced ? 0.25 : 0.6;
@@ -122,7 +129,7 @@ export class Effects {
       this.vel[i * 3] = h.nx * away + h.tx * along + side * h.ty;
       this.vel[i * 3 + 1] = (1 + Math.random() * 3) * up;
       this.vel[i * 3 + 2] = h.ny * away + h.ty * along - side * h.tx;
-      this.life[i] = this.maxLife[i] = life * (0.5 + Math.random() * 0.5) * (up > 1 ? 1.5 : 1);
+      this.life[i] = this.maxLife[i] = life * (0.5 + Math.random() * 0.5) * lifeMul;
     }
   }
 
@@ -138,14 +145,26 @@ export class Effects {
       if (this.life[i] <= 0 || this.pos[i3 + 1] < 0) { this.life[i] = 0; this.col[i3] = this.col[i3 + 1] = this.col[i3 + 2] = 0; continue; }
       const f = this.life[i] / this.maxLife[i]; // 1 -> 0: yellow-orange fading to red, dimming (additive, so black = invisible)
       this.col[i3] = 1; this.col[i3 + 1] = 0.75 * f * f; this.col[i3 + 2] = 0.1 * f * f;
-      const dim = Math.min(1, f * 2); this.col[i3] *= dim; this.col[i3 + 1] *= dim; this.col[i3 + 2] *= dim;
+      const dim = Math.min(0.85, f * 2); this.col[i3] *= dim; this.col[i3 + 1] *= dim; this.col[i3 + 2] *= dim;
     }
     this.points.geometry.attributes.position.needsUpdate = true;
     this.points.geometry.attributes.color.needsUpdate = true;
-    if (this.markDirty) { this.marks!.geometry.attributes.color.needsUpdate = true; this.markDirty = false; }
+    if (this.markDirty) { this.smoothMarks(); this.marks!.geometry.attributes.color.needsUpdate = true; this.markDirty = false; }
+  }
+
+  /** Each vertex takes the mean alpha of the segments sharing it, so neighbouring segments blend into one smudge. */
+  private smoothMarks(): void {
+    const n = this.counts.length / 2, c = this.marks!.geometry.attributes.color.array as Float32Array;
+    const al = (id: number) => darkness(this.counts[id]) * MARK_MAX_ALPHA;
+    for (let id = 0; id < 2 * n; id++) {
+      const base = id < n ? 0 : n, i = id - base, own = al(id);
+      const a = (own + al(base + ((i + n - 1) % n))) / 2, b = (own + al(base + ((i + 1) % n))) / 2;
+      for (const [v, x] of [[0, a], [1, b], [2, b], [3, a], [4, b], [5, a]] as const) c[id * 24 + v * 4 + 3] = x;
+    }
   }
 
   dispose(): void {
+    this.mq?.removeEventListener('change', this.onMq); this.tex.dispose();
     this.scene.remove(this.points); this.points.geometry.dispose(); (this.points.material as THREE.Material).dispose();
     if (this.marks) { this.scene.remove(this.marks); this.marks.geometry.dispose(); (this.marks.material as THREE.Material).dispose(); }
   }
