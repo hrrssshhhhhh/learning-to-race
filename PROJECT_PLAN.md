@@ -55,7 +55,7 @@ Detailed documents:
 
 ### Week 2: the wow
 
-- [ ] **11. Track editor.** Draw with the mouse, live preview, clear error messages, random/default track buttons.
+- [x] **11. Track editor.** Draw with the mouse, live preview, clear error messages, random/default track buttons.
 - [ ] **12. 3D view.** Three.js track and vehicles, chase / orbit / top cameras, the 2D→3D swoop when you hit Race.
 - [ ] **13. Sparks and scrape marks.** Sparks on every scrape; walls darken where vehicles rub most.
 - [ ] **14. Dashboard.** Generation, alive count, lap times, fitness chart, live neural-net diagram, damage bar, a celebration on the first lap. Tune cars vs bikes.
