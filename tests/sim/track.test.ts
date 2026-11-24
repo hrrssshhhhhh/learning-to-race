@@ -34,3 +34,10 @@ test('walls are width apart', () => {
   const t = buildTrack(DEFAULT_TRACK);
   for (let i = 0; i < t.center.length; i += 50) expect(dist(t.inner[i], t.outer[i])).toBeCloseTo(TRACK_WIDTH, 1);
 });
+test('rejects too-long loop', () => expect(validateTrack(circle(800, 48))).toEqual({ ok: false, reason: 'too-long' }));
+test('reports too-tight for a ~6 m radius corner', () => {
+  // long loop whose one corner is a ~6 m radius semicircle (below the 9 m minimum)
+  const pts = [{x:0,y:0},{x:300,y:0},{x:306,y:6},{x:300,y:12},{x:0,y:12},{x:-100,y:6}];
+  const r = validateTrack(pts);
+  expect(r).toEqual({ ok: false, reason: 'too-tight' });
+});

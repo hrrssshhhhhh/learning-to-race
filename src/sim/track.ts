@@ -97,9 +97,11 @@ function check(control: Vec2[]): Checked {
   const { pts, length } = resample(spline(control));
   if (length < MIN_LEN) return { ok: false, reason: 'too-short' };
   if (length > MAX_LEN) return { ok: false, reason: 'too-long' };
-  if (selfIntersects(offsetWall(pts, TRACK_WIDTH / 2)) || selfIntersects(offsetWall(pts, -TRACK_WIDTH / 2)) || selfIntersects(pts))
-    return { ok: false, reason: 'self-intersect' };
+  // order matters: centerline crossing, then radius (a tight corner folds the walls), then wall crossing
+  if (selfIntersects(pts)) return { ok: false, reason: 'self-intersect' };
   if (minRadius(pts) < MIN_RADIUS) return { ok: false, reason: 'too-tight' };
+  if (selfIntersects(offsetWall(pts, TRACK_WIDTH / 2)) || selfIntersects(offsetWall(pts, -TRACK_WIDTH / 2)))
+    return { ok: false, reason: 'self-intersect' };
   return { ok: true, pts, length };
 }
 
