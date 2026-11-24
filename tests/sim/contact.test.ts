@@ -47,3 +47,13 @@ test('event intensity: scrape in [0,1], crash exactly 1, heading follows wall, s
   expect(s.heading).toBeCloseTo(tr.start.heading, 2);
   expect(resolveWallContact(nearWall(tr, 80, 30), CAR, tr)!.intensity).toBe(1);
 });
+test('overlapping but heading away from the wall is not a crash', () => {
+  const tr = t(); const s = nearWall(tr, -60, 30); // inner wall on the left, turned 60 deg to the right = leaving it
+  const ev = resolveWallContact(s, CAR, tr)!;
+  expect(ev.kind).toBe('scrape'); expect(s.alive).toBe(true); expect(s.damage).toBe(0);
+  expect(resolveWallContact(s, CAR, tr)).toBeNull();
+});
+test('near-stationary steep touch is a scrape, not a crash', () => {
+  const tr = t(); const s = nearWall(tr, 60, 1);
+  expect(resolveWallContact(s, CAR, tr)!.kind).toBe('scrape'); expect(s.alive).toBe(true);
+});

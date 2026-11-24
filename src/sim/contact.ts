@@ -6,11 +6,12 @@ import { wallSegmentsNear } from './sensors';
 export interface ContactEvent { kind: 'scrape' | 'crash'; pos: Vec2; intensity: number; vehicleKind: VehicleKind }
 
 // Glancing hits (small angle, low speed into the wall) are survivable scrapes; anything harder is a crash.
-// Placeholder numbers from the brief; tuned in Task 9.
+// Thresholds kept at the Task 6 values after Task 9 tuning: changing them did not move the learning targets.
 export const SCRAPE_MAX_ANGLE = 30; // degrees between heading and wall tangent
 export const SCRAPE_MAX_NORMAL_SPEED = 8; // m/s into the wall
 export const DAMAGE_LIMIT = 1;
 const SCRAPE_SPEED_LOSS = 0.85;
+const CRAWL_SPEED = 2; // m/s; below this a steep touch is a nudge, not a crash
 const BODY_MARGIN = 0.3; // m, padding around half-width so the body circle is slightly generous
 const SCRAPE_MAX_RAD = (SCRAPE_MAX_ANGLE * Math.PI) / 180;
 
@@ -48,13 +49,21 @@ export function resolveWallContact(s: VehicleState, spec: VehicleSpec, track: Tr
   const ev = (kind: 'scrape' | 'crash', intensity: number): ContactEvent =>
     ({ kind, pos: { x: s.pos.x, y: s.pos.y }, intensity, vehicleKind: spec.kind });
 
-  if (theta > SCRAPE_MAX_RAD || vn > SCRAPE_MAX_NORMAL_SPEED) {
+  const push = bestDepth + 1e-6; // the tiny extra push stops float error re-triggering next call
+
+  // Already heading away from the wall (e.g. steering off after a corner joint): not an impact, just separate.
+  if (hx * bx + hy * by >= 0) {
+    s.pos.x += bx * push; s.pos.y += by * push;
+    return ev('scrape', 0);
+  }
+
+  // Steep angle only counts as a crash when actually moving; a near-stationary nudge at any angle is a scrape.
+  if ((theta > SCRAPE_MAX_RAD && s.speed > CRAWL_SPEED) || vn > SCRAPE_MAX_NORMAL_SPEED) {
     s.alive = false;
     return ev('crash', 1);
   }
 
-  // Scrape: slide along the wall, losing speed and health. The tiny extra push stops float error re-triggering next call.
-  const push = bestDepth + 1e-6;
+  // Scrape: slide along the wall, losing speed and health.
   s.pos.x += bx * push; s.pos.y += by * push;
   s.heading = Math.atan2(bty, btx);
   s.speed *= SCRAPE_SPEED_LOSS;

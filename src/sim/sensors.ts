@@ -3,7 +3,9 @@ import type { Track } from './track';
 import type { VehicleState, VehicleSpec } from './vehicle';
 
 export const RAY_ANGLES = [-90, -60, -30, 0, 30, 60, 90]; // degrees from heading; positive = left
-export const RAY_LENGTH = 80; // m
+// m. Task 9 tuning (was 80): at 80 m the side rays in a 14 m track read ~0.09 each, so left/right
+// differences were too small for random brains to steer on; 40 m doubles that signal. 40 m is still ~0.7 s ahead at top speed.
+export const RAY_LENGTH = 40;
 export const INPUT_SIZE = RAY_ANGLES.length + 1; // rays + normalized speed
 const RAY_RAD = RAY_ANGLES.map((d) => (d * Math.PI) / 180);
 

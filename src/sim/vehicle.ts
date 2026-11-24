@@ -14,9 +14,11 @@ export interface VehicleSpec {
   drag: number; // 1/s, linear speed-proportional slowdown
 }
 
-export const CAR: VehicleSpec = { kind: 'car', length: 4.5, width: 1.9, maxSpeed: 55, accel: 9, brake: 20, maxSteer: 0.6, steerAtSpeedFactor: 0.35, drag: 0.02 };
+// Task 9 tuning: steerAtSpeedFactor raised (car 0.35->0.7, bike 0.2->0.45) so early, half-trained brains survive the
+// default track's hairpin/chicane without needing perfect braking; bike still keeps much less grip at speed than car.
+export const CAR: VehicleSpec = { kind: 'car', length: 4.5, width: 1.9, maxSpeed: 55, accel: 9, brake: 20, maxSteer: 0.6, steerAtSpeedFactor: 0.7, drag: 0.02 };
 // Bike: quicker off the line and narrower, but loses more steering as it speeds up.
-export const BIKE: VehicleSpec = { kind: 'bike', length: 2.1, width: 0.8, maxSpeed: 55, accel: 12, brake: 16, maxSteer: 0.7, steerAtSpeedFactor: 0.2, drag: 0.02 };
+export const BIKE: VehicleSpec = { kind: 'bike', length: 2.1, width: 0.8, maxSpeed: 55, accel: 12, brake: 16, maxSteer: 0.7, steerAtSpeedFactor: 0.45, drag: 0.02 };
 export const SPECS: Record<VehicleKind, VehicleSpec> = { car: CAR, bike: BIKE };
 
 /** Both in [-1, 1]. steer > 0 turns left; throttle < 0 brakes. */

@@ -2,7 +2,9 @@ import { gaussian, type Rng } from '../sim/rng';
 import { cloneBrain, type Brain } from './nn';
 
 export interface GAParams { eliteCount: number; tournamentSize: number; mutationRate: number; mutationStd: number }
-export const DEFAULT_GA: GAParams = { eliteCount: 5, tournamentSize: 4, mutationRate: 0.1, mutationStd: 0.3 };
+// Task 9 tuning (was tournament 4, rate 0.1): stronger selection + more, smaller nudges. Most children then descend
+// from the few brains that reached the furthest corner, which is what gets a first lap within ~5 generations.
+export const DEFAULT_GA: GAParams = { eliteCount: 5, tournamentSize: 20, mutationRate: 0.3, mutationStd: 0.3 };
 
 /** Tournament: sample k at random, best wins. Favours good brains but weak ones still get a chance,
  *  which keeps diversity (pure "top N only" converges too early). Tuning k tunes selection pressure. */
