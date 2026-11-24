@@ -18,7 +18,7 @@ const key = (cx: number, cy: number) => cx * 100003 + cy; // cx,cy are small int
 const grids = new WeakMap<Track, Grid>();
 
 function segOf(g: Grid, id: number): [Vec2, Vec2] {
-  const [w, i] = id < g.n ? [g.inner, id] : [g.outer, id - g.n];
+  const w = id < g.n ? g.inner : g.outer, i = id < g.n ? id : id - g.n;
   return [w[i], w[(i + 1) % g.n]];
 }
 
@@ -57,26 +57,48 @@ export function wallSegmentsNear(track: Track, p: Vec2, radius: number): Iterabl
   return out;
 }
 
-/** Per-ray distance to the nearest wall / RAY_LENGTH; 1 = nothing in range. */
-export function castRays(s: VehicleState, track: Track): number[] {
-  const g = gridFor(track), out = RAY_RAD.map(() => 1), px = s.pos.x, py = s.pos.y;
-  const dx = RAY_RAD.map((a) => Math.cos(s.heading + a) * RAY_LENGTH);
-  const dy = RAY_RAD.map((a) => Math.sin(s.heading + a) * RAY_LENGTH);
-  // Hot path (200 vehicles x 7 rays): inlined segment intersection, no allocation, no dedupe
-  // (a segment seen twice just re-tests harmlessly). Same maths as vec.segmentIntersect.
-  forNear(g, s.pos, RAY_LENGTH, (id) => {
-    const [a, b] = segOf(g, id);
-    const sx = b.x - a.x, sy = b.y - a.y, qx = a.x - px, qy = a.y - py;
-    for (let r = 0; r < dx.length; r++) {
-      const denom = dx[r] * sy - dy[r] * sx;
-      if (Math.abs(denom) < 1e-12) continue;
-      const t = (qx * sy - qy * sx) / denom, u = (qx * dy[r] - qy * dx[r]) / denom;
-      if (t >= 0 && t < out[r] && u >= 0 && u <= 1) out[r] = t;
+// Scratch buffers: castRays is synchronous and never re-entered, so sharing them is safe.
+const RAY_DX = new Float64Array(RAY_RAD.length), RAY_DY = new Float64Array(RAY_RAD.length);
+const RAY_HIT = new Float64Array(RAY_RAD.length);
+
+/** Writes per-ray distance / RAY_LENGTH (1 = nothing in range) into RAY_HIT. */
+function cast(s: VehicleState, track: Track): void {
+  const g = gridFor(track), px = s.pos.x, py = s.pos.y, n = g.n, R = RAY_RAD.length;
+  for (let r = 0; r < R; r++) {
+    RAY_DX[r] = Math.cos(s.heading + RAY_RAD[r]) * RAY_LENGTH;
+    RAY_DY[r] = Math.sin(s.heading + RAY_RAD[r]) * RAY_LENGTH;
+    RAY_HIT[r] = 1;
+  }
+  const cx1 = Math.floor((px + RAY_LENGTH) / CELL), cy1 = Math.floor((py + RAY_LENGTH) / CELL);
+  for (let cx = Math.floor((px - RAY_LENGTH) / CELL); cx <= cx1; cx++)
+    for (let cy = Math.floor((py - RAY_LENGTH) / CELL); cy <= cy1; cy++) {
+      const bucket = g.cells.get(key(cx, cy));
+      if (!bucket) continue;
+      // Inlined segment intersection (same maths as vec.segmentIntersect). A segment spanning
+      // several cells is simply re-tested, which is harmless for a min.
+      for (let k = 0; k < bucket.length; k++) {
+        const id = bucket[k], w = id < n ? g.inner : g.outer, i = id < n ? id : id - n;
+        const a = w[i], b = w[i + 1 === n ? 0 : i + 1];
+        const sx = b.x - a.x, sy = b.y - a.y, qx = a.x - px, qy = a.y - py;
+        for (let r = 0; r < R; r++) {
+          const denom = RAY_DX[r] * sy - RAY_DY[r] * sx;
+          if (Math.abs(denom) < 1e-12) continue;
+          const t = (qx * sy - qy * sx) / denom, u = (qx * RAY_DY[r] - qy * RAY_DX[r]) / denom;
+          if (t >= 0 && t < RAY_HIT[r] && u >= 0 && u <= 1) RAY_HIT[r] = t;
+        }
+      }
     }
-  });
-  return out;
+}
+
+/** Per-ray distance to the nearest wall / RAY_LENGTH; 1 = nothing in range. Only allocation: the result. */
+export function castRays(s: VehicleState, track: Track): number[] {
+  cast(s, track);
+  return Array.from(RAY_HIT);
 }
 
 export function sensorInputs(s: VehicleState, spec: VehicleSpec, track: Track): number[] {
-  return [...castRays(s, track), s.speed / spec.maxSpeed];
+  cast(s, track);
+  const out = Array.from(RAY_HIT);
+  out.push(s.speed / spec.maxSpeed);
+  return out;
 }
