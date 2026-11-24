@@ -30,3 +30,15 @@ test('2-layer-deep known weights prove packing order', () => {
   const h1 = Math.tanh(3 * 0.5 + 4 * -1 + 0.2);
   expect(forward(b, x)[0]).toBeCloseTo(Math.tanh(0.5 * h0 - 0.5 * h1 + 0.3), 5);
 });
+test('createBrain is deterministic per seed and biases start at 0', () => {
+  const a = createBrain(LAYERS, makeRng(7)), b = createBrain(LAYERS, makeRng(7));
+  expect(Array.from(a.weights)).toEqual(Array.from(b.weights));
+  for (let o = 0; o < 10; o++) expect(a.weights[8 * 10 + o]).toBe(0); // layer-1 biases
+  for (let o = 0; o < 2; o++) expect(a.weights[8 * 10 + 10 + 10 * 2 + o]).toBe(0); // layer-2 biases
+});
+test('forward works for a wider brain after a narrower one (buffers grow)', () => {
+  const small: Brain = { layers: [1, 1], weights: new Float32Array([1, 0]) };
+  forward(small, [1]);
+  const big = createBrain([3, 12, 1], makeRng(2));
+  expect(forward(big, [1, 1, 1])).toHaveLength(1);
+});
