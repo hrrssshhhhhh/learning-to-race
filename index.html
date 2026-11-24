@@ -2,11 +2,13 @@
 <html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Self-Learning Vehicles</title>
 <style>
   html, body { margin: 0; height: 100%; background: #0f1115; color: #e6e8ee; font: 14px system-ui, sans-serif; overflow: hidden; }
-  #app, #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  #hud { position: fixed; top: 8px; left: 12px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
+  #app, #stage, #stage3d { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; top: 8px; left: 12px; font-variant-numeric: tabular-nums; background: rgba(15,17,21,.8); padding: 6px 10px; border-radius: 8px; }
   #controls { position: fixed; bottom: 8px; left: 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: rgba(15,17,21,.8); padding: 8px 12px; border-radius: 8px; }
   #controls fieldset { border: 0; margin: 0; padding: 0; display: flex; gap: 12px; }
   #controls legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #controls legend.show { position: static; width: auto; height: auto; overflow: visible; clip: auto; float: left; padding: 0; color: #9aa0ad; }
+  #controls fieldset:disabled { opacity: .45; }
   #controls button { font: inherit; padding: 4px 10px; }
   #editor { position: fixed; inset: 0; width: 100%; height: 100%; background: #0f1115; z-index: 10; cursor: crosshair; }
   #editor[hidden], .editor-panel[hidden] { display: none; }
