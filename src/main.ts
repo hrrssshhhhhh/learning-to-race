@@ -53,6 +53,7 @@ function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; // camera only; the sim is fixed-step
   const events: ContactEvent[] = [];
   if (!editor.isOpen) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
+  scene3d?.effects.add(events); // marks accumulate even while the 2D view is showing
   const w = app.world, car = Math.max(0, w.populations.findIndex((p) => p.kind === 'car'));
   const li = w.leader(w.populations[car]), lead = w.populations[car].vehicles[li];
   // only the visible renderer draws
@@ -68,7 +69,7 @@ function frame(now: number): void {
     if (rig.mode !== app.camera) rig.setMode(app.camera);
     rig.follow(lead.pos, lead.heading);
     rig.update(dt);
-    scene3d.render(w);
+    scene3d.render(w, dt);
   }
   hud.textContent = w.populations
     .map((p) => `${p.label} gen ${p.generation} | alive ${p.vehicles.filter((v) => v.alive).length}/${p.vehicles.length}`)

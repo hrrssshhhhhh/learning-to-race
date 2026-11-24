@@ -4,6 +4,7 @@ import type { Track } from '../sim/track';
 import type { World } from '../sim/world';
 import type { Vec2 } from '../sim/vec';
 import { SPECS, type VehicleKind } from '../sim/vehicle';
+import { Effects } from './effects';
 
 // World (x, y) metres -> three (X, Z), Y up. Seen from above with screen-up = -Z this matches the 2D view.
 const COLORS: Record<VehicleKind, number> = { car: 0x4aa3ff, bike: 0xffb347 }; // same as the 2D view
@@ -97,7 +98,7 @@ function trackGeometry(t: Track): THREE.BufferGeometry {
   for (let r = 0; r < 2; r++) for (let k = 0; k < cells; k++) {
     const p = (q: number, dr: number) => {
       const e = lerp2(t.inner[0], t.outer[0], q / cells);
-      return v3({ x: e.x + f.x * dr, y: e.y + f.y * dr }, 0.06);
+      return v3({ x: e.x + f.x * dr, y: e.y + f.y * dr }, 0.07); // above kerbs (0.06): no z-fight at the line
     };
     s.quad(p(k, r - 1), p(k + 1, r - 1), p(k + 1, r), p(k, r), (k + r) % 2 ? 0x111111 : 0xffffff);
   }
@@ -118,6 +119,7 @@ export class Scene3D {
   };
   private fleets: Partial<Record<VehicleKind, THREE.InstancedMesh>> = {};
   private observer: ResizeObserver;
+  readonly effects: Effects;
   // reused every frame: no per-frame allocation
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private q = new THREE.Quaternion();
   private one = new THREE.Vector3(1, 1, 1); private zero = new THREE.Vector3(0, 0, 0);
@@ -138,6 +140,7 @@ export class Scene3D {
       // pushed back in depth so the road (2 cm up) never z-fights it from far or oblique views
       new THREE.MeshStandardMaterial({ color: GROUND, roughness: 1, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4 }));
     this.scene.add(this.ground);
+    this.effects = new Effects(this.scene);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(container);
     this.resize();
@@ -155,6 +158,7 @@ export class Scene3D {
     if (this.trackMesh) { this.trackMesh.geometry.dispose(); this.scene.remove(this.trackMesh); }
     this.trackMesh = new THREE.Mesh(trackGeometry(t), this.trackMat);
     this.scene.add(this.trackMesh);
+    this.effects.setTrack(t);
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (const p of t.outer) { x0 = Math.min(x0, p.x); z0 = Math.min(z0, p.y); x1 = Math.max(x1, p.x); z1 = Math.max(z1, p.y); }
     const size = Math.max(x1 - x0, z1 - z0);
@@ -165,7 +169,8 @@ export class Scene3D {
     this.camera.far = size * 8; this.camera.updateProjectionMatrix();
   }
 
-  render(w: World): void {
+  render(w: World, dt = 0): void {
+    this.effects.update(dt);
     this.used.car = this.used.bike = 0;
     for (const pop of w.populations) this.used[pop.kind] += pop.vehicles.length;
     for (const kind of ['car', 'bike'] as const) {
@@ -195,6 +200,7 @@ export class Scene3D {
 
   dispose(): void {
     this.observer.disconnect();
+    this.effects.dispose();
     this.trackMesh?.geometry.dispose();
     this.trackMat.dispose();
     this.ground.geometry.dispose(); (this.ground.material as THREE.Material).dispose();
