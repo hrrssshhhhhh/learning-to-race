@@ -51,7 +51,7 @@ Detailed documents:
 - [x] **7. Neural network**, from scratch: rays + speed in, steering + throttle out.
 - [x] **8. Genetic algorithm**, from scratch: keep the best, mix, mutate.
 - [x] **9. The world loop.** Run generations, score progress, stop cheaters (driving backwards, sitting still). **Test that the time goals are met.**
-- [ ] **10. 2D view.** Watch them learn in the browser, with a speed slider and car/bike toggles. → *Working fallback product.*
+- [x] **10. 2D view.** Watch them learn in the browser, with a speed slider and car/bike toggles. → *Working fallback product.*
 
 ### Week 2: the wow
 
