@@ -47,7 +47,7 @@ Detailed documents:
 - [x] **3. Random track generator.** Endless valid F1-style tracks, used to train the generalist.
 - [x] **4. Car and bike physics.** Accelerate, brake, steer; bikes are quicker but grip less.
 - [x] **5. Sensors.** 7 distance rays, the vehicle's "eyes".
-- [ ] **6. Scrape vs crash.** Angle and speed of impact decide whether it scrapes or crashes; a damage meter.
+- [x] **6. Scrape vs crash.** Angle and speed of impact decide whether it scrapes or crashes; a damage meter.
 - [ ] **7. Neural network**, from scratch: rays + speed in, steering + throttle out.
 - [ ] **8. Genetic algorithm**, from scratch: keep the best, mix, mutate.
 - [ ] **9. The world loop.** Run generations, score progress, stop cheaters (driving backwards, sitting still). **Test that the time goals are met.**
