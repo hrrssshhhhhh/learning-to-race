@@ -68,7 +68,7 @@ Detailed documents:
 
 ### Week 3: the ML story and launch
 
-- [ ] **15. Keep my vehicles.** Save trained vehicles in the browser. Choose Fresh / My vehicles / Generalist when racing. "First lap in X generations vs Y from scratch" stat.
+- [x] **15. Keep my vehicles.** Save trained vehicles in the browser. Choose Fresh / My vehicles / Generalist when racing. "First lap in X generations vs Y from scratch" stat.
 - [ ] **16. Pre-training.** Train the specialist and generalist offline and ship them with the site.
 - [ ] **17. Test on unseen track.** Specialist vs generalist vs your vehicles, side by side, with completion rates.
 - [ ] **18. Experiments + Results page + README.**
