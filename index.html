@@ -40,16 +40,17 @@
   fieldset:disabled label, .seg label:has(input:disabled) { cursor: not-allowed; }
 
   /* title over the canvas */
-  .title { position: fixed; top: 16px; left: 16px; z-index: 4; max-width: calc(100% - var(--side, 0px) - 160px); padding: 8px 12px; border-radius: 12px; background: rgba(20,20,21,.86); border: 1px solid var(--line); pointer-events: none; }
+  .title { position: fixed; top: 16px; left: 16px; z-index: 4; max-width: calc(100% - var(--side, 0px) - 360px); padding: 8px 12px; border-radius: 12px; background: rgba(20,20,21,.72); pointer-events: none; }
   .title h1 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 500; }
-  .title p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 20px; }
+  .title p { margin: 0; color: var(--text-2); font-size: 12px; line-height: 16px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
   body:has(#editor:not([hidden])) .title { display: none; } /* the editor has its own hint in that spot */
 
-  .viewbar { position: fixed; top: 16px; right: calc(var(--side, 0px) + 16px); z-index: 4; display: flex; gap: 8px; padding: 4px; border-radius: 14px; background: rgba(20,20,21,.86); border: 1px solid var(--line); }
+  .viewbar { position: fixed; top: 16px; right: calc(var(--side, 0px) + 16px); z-index: 4; display: flex; gap: 8px; }
+  .viewbar .seg { background: rgba(15,15,16,.86); }
   body:not(.panel-open) .viewbar { right: 96px; } /* leave room for the Stats button */
   body:has(#editor:not([hidden])) .viewbar { display: none; }
   /* controls bar: groups never split; on narrow screens it becomes one swipeable strip */
-  #controls { position: fixed; left: 16px; right: calc(var(--side, 0px) + 16px); bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
+  #controls { position: fixed; left: 16px; max-width: calc(100% - var(--side, 0px) - 56px); box-sizing: border-box; bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
   #controls .group { display: flex; align-items: center; gap: 8px; }
   #controls .group + .group { padding-left: 12px; border-left: 1px solid var(--line); }
   #controls .lbl { color: var(--muted); font-size: 13px; }
@@ -58,7 +59,7 @@
   @media (max-width: 760px) {
     #controls { left: 8px; right: 8px; bottom: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     #controls .group { flex: none; }
-    .title { top: 8px; left: 8px; max-width: calc(100% - 140px); }
+    .title { top: 8px; left: 8px; max-width: calc(100% - 96px); }
     .viewbar, body:not(.panel-open) .viewbar { top: auto; bottom: 72px; right: 8px; }
   }
 
@@ -68,6 +69,10 @@
   body:not(.panel-open) #panel { top: 16px; right: 16px; }
   body:not(.panel-open) .panel-body, body:not(.panel-open) .spec { display: none; }
   @media (max-width: 760px) { body:not(.panel-open) #panel { top: 8px; right: 8px; } }
+  .training { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .training .lbl { color: var(--muted); font-size: 13px; }
+  .training select { flex: 1 1 calc(100% - 96px); }
+  .training button { flex: 1 1 0; } /* Restart and Save share the second row equally */
   .panel-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
   .spec { flex: 1; margin: 0; color: var(--text-2); font-size: 13px; line-height: 20px; }
   #panel h2 { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--text-2); margin: 24px 0 8px; }

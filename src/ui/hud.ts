@@ -20,6 +20,8 @@ interface Card { done: HTMLElement; xfer: HTMLElement; gen: HTMLElement; alive: 
 export class Hud {
   /** Population index the camera, rays and net diagram follow. */
   focus = 0;
+  /** Where the controls put the training settings (start from, restart, save). */
+  readonly trainingSlot: HTMLElement;
   /** Set when the run started from the user's saved vehicles: first-lap generation of a fresh run on this track, if known. */
   transfer: Partial<Record<VehicleKind, number>> | null = null;
   /** Called by the results card's Keep training button (test mode). */
@@ -39,6 +41,7 @@ export class Hud {
     root.innerHTML = `
       <div class="panel-head"><p class="spec"></p><button type="button" class="btn panel-toggle" aria-controls="panel-body">Stats</button></div>
       <div class="panel-body" id="panel-body">
+        <div class="training" role="group" aria-label="Training"></div>
         <div class="results" role="status" hidden><p></p><button type="button">Keep training</button></div>
         <div class="pops" role="radiogroup" aria-label="Follow population"></div>
         <h2>Best score per generation</h2>
@@ -48,6 +51,7 @@ export class Hud {
       </div>`;
     this.spec = root.querySelector('.spec')!;
     this.pops = root.querySelector('.pops')!;
+    this.trainingSlot = root.querySelector('.training')!;
     this.results = root.querySelector('.results')!;
     this.results.querySelector('button')!.addEventListener('click', () => this.onKeepTraining());
     this.chart = root.querySelector('.chart')!;

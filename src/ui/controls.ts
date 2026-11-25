@@ -6,7 +6,7 @@ import type { StartPoint } from '../storage/brains';
 export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint }
 
 export function mountControls(
-  root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
+  root: HTMLElement, training: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
 ): { sync(): void; setTesting(on: boolean): void } {
   // radios and checkboxes render as segmented toggles; the legend stays for screen readers, the label span is visual
   const seg = (name: string, legend: string, type: 'radio' | 'checkbox', opts: [string, string][], checked = false) =>
@@ -19,16 +19,6 @@ export function mountControls(
       <label for="test-kind" class="sr-only">Test with</label>
       <select id="test-kind" class="btn"><option value="car">with cars</option><option value="bike">with bikes</option></select>
     </div>
-    <div class="group" role="group" aria-label="Training">
-      <label for="start" class="lbl">Start from</label>
-      <select id="start" class="btn">
-        <option value="fresh">Fresh</option>
-        <option value="mine">My vehicles</option>
-        <option value="specialist">Pre-trained</option>
-      </select>
-      <button type="button" class="btn" id="reset">Restart</button>
-      <button type="button" class="btn ghost" id="keep">Save vehicles</button>
-    </div>
     <div class="group">
       <label for="speed" class="sr-only">Simulation speed</label>
       <input id="speed" type="range" min="1" max="10" step="1" value="${app.speed}">
@@ -37,6 +27,16 @@ export function mountControls(
     <div class="group">
       ${seg('kinds', 'Vehicles', 'checkbox', [['car', 'Cars'], ['bike', 'Bikes']], true)}
     </div>`;
+  // training settings live in the stats panel: set once per run, not touched every few seconds
+  training.innerHTML = `
+    <label for="start" class="lbl">Start from</label>
+    <select id="start" class="btn">
+      <option value="fresh">Fresh</option>
+      <option value="mine">My vehicles</option>
+      <option value="specialist">Pre-trained</option>
+    </select>
+    <button type="button" class="btn" id="reset">Restart</button>
+    <button type="button" class="btn" id="keep">Save vehicles</button>`;
   // view controls sit on the canvas (top right), next to what they change, so the bottom bar fits one row
   const viewbar = document.createElement('div');
   viewbar.className = 'viewbar'; viewbar.setAttribute('role', 'group'); viewbar.setAttribute('aria-label', 'View');
@@ -44,12 +44,12 @@ export function mountControls(
   root.before(viewbar);
   const speed = root.querySelector<HTMLInputElement>('#speed')!, out = root.querySelector('#speed-out')!;
   speed.addEventListener('input', () => { app.speed = +speed.value; out.textContent = app.speed + 'x'; });
-  root.querySelector('#reset')!.addEventListener('click', () => actions.reset());
+  training.querySelector('#reset')!.addEventListener('click', () => actions.reset());
   root.querySelector('#draw')!.addEventListener('click', () => actions.draw());
-  root.querySelector('#keep')!.addEventListener('click', () => actions.keep());
+  training.querySelector('#keep')!.addEventListener('click', () => actions.keep());
   const testKind = root.querySelector<HTMLSelectElement>('#test-kind')!;
   root.querySelector('#test')!.addEventListener('click', () => actions.test(testKind.value as VehicleKind));
-  const start = root.querySelector<HTMLSelectElement>('#start')!;
+  const start = training.querySelector<HTMLSelectElement>('#start')!;
   start.value = app.start; // applies to the next Restart or Race, not the run in progress
   start.addEventListener('change', () => { app.start = start.value as StartPoint; });
   const view = viewbar.querySelector<HTMLFieldSetElement>('#view')!, cam = viewbar.querySelector<HTMLFieldSetElement>('#camera')!;

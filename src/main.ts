@@ -60,7 +60,7 @@ try {
 if (import.meta.env.DEV) Object.assign(window, { slv: { app, scene3d, rig } }); // browser checks read renderer.info
 
 const hud = new Hud(root.querySelector<HTMLElement>('#panel')!);
-const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, app, {
+const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, hud.trainingSlot, app, {
   reset: () => void restart(),
   setKinds: (k) => { kinds = k; void restart(); },
   draw: () => { testKind = null; editor.open(); },
