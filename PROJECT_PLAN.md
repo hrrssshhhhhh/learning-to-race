@@ -59,6 +59,12 @@ Detailed documents:
 - [x] **12. 3D view.** Three.js track and vehicles, chase / orbit / top cameras, the 2D→3D swoop when you hit Race.
 - [x] **13. Sparks and scrape marks.** Sparks on every scrape; walls darken where vehicles rub most.
 - [ ] **14. Dashboard.** Generation, alive count, lap times, fitness chart, live neural-net diagram, damage bar, a celebration on the first lap. Tune cars vs bikes.
+  - Spec strip at the top: vehicle count, sensors, net shape, "genetic algorithm". Tells reviewers the tech in one line.
+  - Best-per-generation bar chart (one bar per generation) in place of a noisy fitness line.
+  - Highlight the leader and draw its 7 sensor rays, so the net diagram visibly drives that vehicle.
+  - "Best ever" and leader checkpoints (e.g. 162/168) on the panel.
+  - One collapsible side panel holding all stats, readable size and contrast, never covering the track.
+  - First check how much room the 2D and 3D canvases leave for a side panel. If the canvas can shrink, put the panel beside it; if not, overlay it, collapsible and semi-transparent.
 
 ### Week 3: the ML story and launch
 
