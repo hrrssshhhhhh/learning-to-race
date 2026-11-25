@@ -5,6 +5,7 @@ import type { World } from '../sim/world';
 import type { Vec2 } from '../sim/vec';
 import { SPECS, type VehicleKind } from '../sim/vehicle';
 import { Effects } from './effects';
+import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
 // World (x, y) metres -> three (X, Z), Y up. Seen from above with screen-up = -Z this matches the 2D view.
 const COLORS: Record<VehicleKind, number> = { car: 0x4aa3ff, bike: 0xffb347 }; // same as the 2D view
@@ -25,10 +26,11 @@ function vehicleGeometry(kind: VehicleKind): THREE.BufferGeometry {
     box(-s.length / 2 + 0.2, 1.0, 0, 0.35, 0.08, s.width, 0.3); // rear wing
     for (const x of [-1, 1]) for (const z of [-1, 1]) wheel(x * s.length * 0.32, z * (s.width / 2 - 0.1), 0.36, 0.32);
   } else {
-    box(0, 0.62, 0, s.length * 0.8, 0.35, s.width * 0.4, 1); // frame
-    box(-0.15, 1.15, 0, 0.5, 0.75, 0.45, 0.3); // rider
-    box(0.05, 1.68, 0, 0.32, 0.32, 0.32, 1); // helmet
-    for (const x of [-1, 1]) wheel(x * s.length * 0.36, 0, 0.33, 0.12);
+    box(0, 0.5, 0, s.length * 0.62, 0.3, 0.14, 1); // frame: thin, sits between the wheels
+    box(s.length * 0.3, 0.95, 0, 0.08, 0.08, 0.62, 0.2); // handlebar
+    box(-0.15, 1.05, 0, 0.45, 0.7, 0.3, 0.3); // rider
+    box(0.05, 1.55, 0, 0.3, 0.3, 0.3, 1); // helmet
+    for (const x of [-1, 1]) wheel(x * s.length * 0.36, 0, 0.33, 0.1);
   }
   const geos = parts.map(([g, grey]) => {
     g.setAttribute('color', new THREE.Float32BufferAttribute(new Array(g.attributes.position.count * 3).fill(grey), 3));
@@ -124,6 +126,12 @@ export class Scene3D {
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private q = new THREE.Quaternion();
   private one = new THREE.Vector3(1, 1, 1); private zero = new THREE.Vector3(0, 0, 0);
   private used: Record<VehicleKind, number> = { car: 0, bike: 0 };
+  // followed leader: its 7 sensor rays plus a marker cone overhead, so the net diagram has a visible body
+  private rays = new THREE.LineSegments(
+    new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(RAY_ANGLES.length * 6), 3)),
+    new THREE.LineBasicMaterial({ color: 0x6ee7a0 }));
+  private marker = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.8, 12).rotateX(Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0x6ee7a0 }));
 
   /** Throws if WebGL is unavailable; the caller falls back to 2D. */
   constructor(private container: HTMLElement) {
@@ -141,6 +149,8 @@ export class Scene3D {
       new THREE.MeshStandardMaterial({ color: GROUND, roughness: 1, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4 }));
     this.scene.add(this.ground);
     this.effects = new Effects(this.scene);
+    this.rays.frustumCulled = false; // positions change every frame; bounds would go stale
+    this.scene.add(this.rays, this.marker);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(container);
     this.resize();
@@ -169,7 +179,7 @@ export class Scene3D {
     this.camera.far = size * 8; this.camera.updateProjectionMatrix();
   }
 
-  render(w: World, dt = 0): void {
+  render(w: World, dt = 0, focus?: { pop: number; vehicle: number }): void {
     this.effects.update(dt);
     this.used.car = this.used.bike = 0;
     for (const pop of w.populations) this.used[pop.kind] += pop.vehicles.length;
@@ -195,12 +205,26 @@ export class Scene3D {
       }
     }
     for (const kind of ['car', 'bike'] as const) this.fleets[kind]!.instanceMatrix.needsUpdate = true;
+    const v = focus ? w.populations[focus.pop]?.vehicles[focus.vehicle] : undefined;
+    this.rays.visible = this.marker.visible = !!v?.alive;
+    if (v?.alive) {
+      const hits = castRays(v, w.track), arr = this.rays.geometry.attributes.position as THREE.BufferAttribute;
+      RAY_ANGLES.forEach((deg, i) => {
+        const a = v.heading + (deg * Math.PI) / 180, d = hits[i] * RAY_LENGTH;
+        arr.setXYZ(2 * i, v.pos.x, 0.6, v.pos.y);
+        arr.setXYZ(2 * i + 1, v.pos.x + Math.cos(a) * d, 0.6, v.pos.y + Math.sin(a) * d);
+      });
+      arr.needsUpdate = true;
+      this.marker.position.set(v.pos.x, 3.2, v.pos.y);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
   dispose(): void {
     this.observer.disconnect();
     this.effects.dispose();
+    this.rays.geometry.dispose(); (this.rays.material as THREE.Material).dispose();
+    this.marker.geometry.dispose(); (this.marker.material as THREE.Material).dispose();
     this.trackMesh?.geometry.dispose();
     this.trackMat.dispose();
     this.ground.geometry.dispose(); (this.ground.material as THREE.Material).dispose();

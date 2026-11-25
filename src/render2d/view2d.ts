@@ -5,7 +5,7 @@ import type { Vec2 } from '../sim/vec';
 import { SPECS } from '../sim/vehicle';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
-const COLORS = { car: '#4aa3ff', bike: '#ffb347' } as const;
+export const COLORS = { car: '#4aa3ff', bike: '#ffb347' } as const;
 const FLASH_FRAMES = 12;
 
 export class View2D {
@@ -77,6 +77,8 @@ export class View2D {
         c.moveTo(v.pos.x, v.pos.y); c.lineTo(v.pos.x + Math.cos(a) * d, v.pos.y + Math.sin(a) * d);
       });
       c.stroke();
+      c.strokeStyle = '#6ee7a0'; c.lineWidth = 2 * px; // leader ring: the vehicle the net diagram is driving
+      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(4, 9 * px), 0, Math.PI * 2); c.stroke();
     }
 
     // alive vehicles only; min size so tiny bikes stay visible when zoomed out

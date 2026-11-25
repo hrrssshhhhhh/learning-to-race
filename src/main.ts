@@ -8,6 +8,7 @@ import { Scene3D } from './render3d/scene';
 import { CameraRig } from './render3d/camera';
 import { Editor } from './editor/editor';
 import { mountControls, type AppState } from './ui/controls';
+import { Hud } from './ui/hud';
 
 let track = buildTrack(DEFAULT_TRACK); // the track in play; Race replaces it
 const make = (kinds: VehicleKind[]) => new World(track, { kinds, seed: Date.now() });
@@ -15,7 +16,7 @@ const app: AppState = { world: make(['car', 'bike']), speed: 1, view: '3d', came
 let kinds: VehicleKind[] = ['car', 'bike'];
 
 const root = document.getElementById('app')!;
-root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><div id="hud"></div><div id="controls"></div><canvas id="editor"></canvas>';
+root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><aside id="panel" aria-label="Training stats"></aside><div id="controls"></div><canvas id="editor"></canvas>';
 const stage2d = root.querySelector<HTMLCanvasElement>('#stage')!, stage3d = root.querySelector<HTMLElement>('#stage3d')!;
 const view = new View2D(stage2d);
 view.setTrack(track);
@@ -31,7 +32,7 @@ try {
 }
 if (import.meta.env.DEV) Object.assign(window, { slv: { app, scene3d, rig } }); // browser checks read renderer.info
 
-const hud = root.querySelector<HTMLElement>('#hud')!;
+const hud = new Hud(root.querySelector<HTMLElement>('#panel')!);
 const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, app, {
   reset: () => { app.world = make(kinds); },
   setKinds: (k) => { kinds = k; app.world = make(k); },
@@ -54,13 +55,14 @@ function frame(now: number): void {
   const events: ContactEvent[] = [];
   if (!editor.isOpen) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
   scene3d?.effects.add(events, app.view === '3d'); // marks accumulate in 2D too; sparks only while visible
-  const w = app.world, car = Math.max(0, w.populations.findIndex((p) => p.kind === 'car'));
-  const li = w.leader(w.populations[car]), lead = w.populations[car].vehicles[li];
+  const w = app.world;
+  hud.update(w); // first: clamps hud.focus when the world changes
+  const focus = { pop: hud.focus, vehicle: w.leader(w.populations[hud.focus]) }, lead = w.populations[focus.pop].vehicles[focus.vehicle];
   // only the visible renderer draws
   stage2d.style.visibility = app.view === '2d' ? 'visible' : 'hidden';
   stage3d.style.visibility = app.view === '3d' ? 'visible' : 'hidden';
   if (app.view === '2d') {
-    view.render(w, events, { showRaysFor: { pop: car, vehicle: li } });
+    view.render(w, events, { showRaysFor: focus });
     if (swoopNext && !editor.isOpen) {
       swoopNext = false; app.view = '3d'; app.camera = 'chase'; controls.sync();
       rig!.swoopFromTop(track);
@@ -69,11 +71,8 @@ function frame(now: number): void {
     if (rig.mode !== app.camera) rig.setMode(app.camera);
     rig.follow(lead.pos, lead.heading);
     rig.update(dt);
-    scene3d.render(w, dt);
+    scene3d.render(w, dt, focus);
   }
-  hud.textContent = w.populations
-    .map((p) => `${p.label} gen ${p.generation} | alive ${p.vehicles.filter((v) => v.alive).length}/${p.vehicles.length}`)
-    .join('   ') + `   | sim ${w.totalSimSeconds.toFixed(0)}s`;
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

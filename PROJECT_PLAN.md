@@ -58,7 +58,7 @@ Detailed documents:
 - [x] **11. Track editor.** Draw with the mouse, live preview, clear error messages, random/default track buttons.
 - [x] **12. 3D view.** Three.js track and vehicles, chase / orbit / top cameras, the 2D→3D swoop when you hit Race.
 - [x] **13. Sparks and scrape marks.** Sparks on every scrape; walls darken where vehicles rub most.
-- [ ] **14. Dashboard.** Generation, alive count, lap times, fitness chart, live neural-net diagram, damage bar, a celebration on the first lap. Tune cars vs bikes.
+- [x] **14. Dashboard.** Generation, alive count, lap times, fitness chart, live neural-net diagram, damage bar, a celebration on the first lap. Tune cars vs bikes.
   - Spec strip at the top: vehicle count, sensors, net shape, "genetic algorithm". Tells reviewers the tech in one line.
   - Best-per-generation bar chart (one bar per generation) in place of a noisy fitness line.
   - Highlight the leader and draw its 7 sensor rays, so the net diagram visibly drives that vehicle.

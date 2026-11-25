@@ -18,7 +18,9 @@ export interface VehicleSpec {
 // default track's hairpin/chicane without needing perfect braking; bike still keeps much less grip at speed than car.
 export const CAR: VehicleSpec = { kind: 'car', length: 4.5, width: 1.9, maxSpeed: 55, accel: 9, brake: 20, maxSteer: 0.6, steerAtSpeedFactor: 0.7, drag: 0.02 };
 // Bike: quicker off the line and narrower, but loses more steering as it speeds up.
-export const BIKE: VehicleSpec = { kind: 'bike', length: 2.1, width: 0.8, maxSpeed: 55, accel: 12, brake: 16, maxSteer: 0.7, steerAtSpeedFactor: 0.45, drag: 0.02 };
+// Task 14: higher top speed (55->60) with the weaker brakes and grip, so bikes carry speed later into corners and
+// run wider than cars: the two kinds learn visibly different lines.
+export const BIKE: VehicleSpec = { kind: 'bike', length: 2.1, width: 0.8, maxSpeed: 60, accel: 12, brake: 16, maxSteer: 0.7, steerAtSpeedFactor: 0.45, drag: 0.02 };
 export const SPECS: Record<VehicleKind, VehicleSpec> = { car: CAR, bike: BIKE };
 
 /** Both in [-1, 1]. steer > 0 turns left; throttle < 0 brakes. */
