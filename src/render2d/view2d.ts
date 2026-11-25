@@ -5,14 +5,17 @@ import type { Vec2 } from '../sim/vec';
 import { SPECS, type VehicleKind, type VehicleState } from '../sim/vehicle';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
-export const COLORS = { car: '#4aa3ff', bike: '#ffb347' } as const;
+// Neon palette, shared by 2D, 3D and the panel: cars cyan, bikes magenta, the followed leader lime.
+export const COLORS = { car: '#38e1ff', bike: '#ff4fd8' } as const;
+export const NEON = { car: 0x38e1ff, bike: 0xff4fd8 } as const;
+export const LEAD = '#c6ff3d';
 // Test mode contenders share one kind, so they are coloured by label instead
-const LABEL_COLORS: Record<string, string> = { specialist: '#ff8a3d', fresh: '#a0a6b3', mine: '#ff5ccf' };
+const LABEL_COLORS: Record<string, string> = { specialist: '#ffb020', fresh: '#8a90a6', mine: '#9d7bff' };
 export const popColor = (p: { kind: VehicleKind; label: string }) => LABEL_COLORS[p.label] ?? COLORS[p.kind];
 
 const FLASH_FRAMES = 14, TRAIL = 18; // trail = last 18 rendered positions per vehicle
-const BG = '#141415', VERGE = '#1c2620', ROAD = '#2c2d31', WALL = '#e4e6ea', LEAD = '#6ee7a0';
-const KERB_RED = '#d8312f', KERB_WHITE = '#f2f2f2', KERB_W = 1.3, KERB_RADIUS = 40, VERGE_W = 7; // m, same kerb rule as the 3D track
+const BG = '#07080d', VERGE = '#0d0f1a', ROAD = '#14151d';
+const KERB_RED = '#ff2d55', KERB_WHITE = '#dfe7ff', KERB_W = 1.3, KERB_RADIUS = 40, VERGE_W = 7; // m, same kerb rule as the 3D track
 const MIN_LEN_PX = 10; // vehicles never draw shorter than this, so they read as cars and bikes when zoomed out
 
 /** Circumradius over a ~12 m chord at centre sample i (same rule the 3D kerbs use). */
@@ -70,8 +73,10 @@ export class View2D {
     L.width = this.canvas.width; L.height = this.canvas.height;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.fillStyle = BG; c.fillRect(0, 0, this.w, this.h);
-    c.fillStyle = 'rgba(237,237,237,0.05)'; // ground: a quiet dot grid, like a timing screen's map
-    for (let x = 12; x < this.w; x += 24) for (let y = 12; y < this.h; y += 24) c.fillRect(x, y, 1, 1);
+    c.strokeStyle = 'rgba(70,80,170,0.16)'; c.lineWidth = 1; c.beginPath(); // ground: a faint indigo grid, like the 3D floor
+    for (let x = 0.5; x < this.w; x += 32) { c.moveTo(x, 0); c.lineTo(x, this.h); }
+    for (let y = 0.5; y < this.h; y += 32) { c.moveTo(0, y); c.lineTo(this.w, y); }
+    c.stroke();
 
     c.translate(this.ox, this.oy); c.scale(this.k, this.k);
     const px = 1 / this.k;
@@ -94,10 +99,14 @@ export class View2D {
       }
     }
     // centre line, dashed and faint: shows the shape of the lap without competing with the cars
-    c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 1 * px; c.setLineDash([6 * px, 10 * px]);
+    c.strokeStyle = 'rgba(56,225,255,0.16)'; c.lineWidth = 1 * px; c.setLineDash([6 * px, 10 * px]);
     c.beginPath(); this.path(c, cen); c.stroke(); c.setLineDash([]);
-    c.strokeStyle = WALL; c.lineWidth = 1.25 * px;
-    for (const wall of [t.outer, t.inner]) { c.beginPath(); this.path(c, wall); c.stroke(); }
+    // neon walls: cyan outside, magenta inside, each drawn twice (soft glow, then a crisp core)
+    for (const [wall, col] of [[t.outer, COLORS.car], [t.inner, COLORS.bike]] as const) {
+      c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 12; c.globalAlpha = 0.55; c.lineWidth = 3 * px;
+      c.beginPath(); this.path(c, wall); c.stroke();
+      c.shadowBlur = 0; c.globalAlpha = 1; c.lineWidth = 1.25 * px; c.stroke();
+    }
     this.startLine(c, t, px);
   }
 
@@ -107,7 +116,7 @@ export class View2D {
     const n = Math.max(4, Math.round(len / 2)), ux = ax / n, uy = ay / n; // ~2 m squares
     const fx = (-ay / len) * (len / n), fy = (ax / len) * (len / n); // one square deep, along the road
     for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
-      c.fillStyle = (i + row) % 2 ? '#141415' : '#f2f2f2';
+      c.fillStyle = (i + row) % 2 ? '#07080d' : '#dfe7ff';
       const x = s0.a.x + ux * i + fx * (row - 1), y = s0.a.y + uy * i + fy * (row - 1);
       c.beginPath(); c.moveTo(x, y); c.lineTo(x + ux, y + uy); c.lineTo(x + ux + fx, y + uy + fy); c.lineTo(x + fx, y + fy); c.closePath(); c.fill();
     }
@@ -157,8 +166,8 @@ export class View2D {
     const px = 1 / this.k;
     c.lineJoin = 'round'; c.lineCap = 'round';
 
-    // trails first, under every vehicle: short fading streaks in each population's colour
-    c.lineWidth = 1.5 * px;
+    // trails first, under every vehicle: additive streaks, so where many overlap the racing line glows
+    c.lineWidth = 2 * px; c.globalCompositeOperation = 'lighter';
     for (const p of w.populations) {
       c.strokeStyle = popColor(p); c.globalAlpha = 0.3; c.beginPath();
       for (const v of p.vehicles) {
@@ -172,7 +181,7 @@ export class View2D {
       }
       c.stroke();
     }
-    c.globalAlpha = 1;
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 
     for (const p of w.populations) {
       const spec = SPECS[p.kind], s = Math.max(1, (MIN_LEN_PX * px) / spec.length), color = popColor(p);
@@ -192,20 +201,20 @@ export class View2D {
         const a = v.heading + (deg * Math.PI) / 180, d = hits[i] * RAY_LENGTH;
         return { x: v.pos.x + Math.cos(a) * d, y: v.pos.y + Math.sin(a) * d, hit: hits[i] < 1 };
       });
-      c.strokeStyle = 'rgba(110,231,160,0.6)'; c.lineWidth = 1 * px; c.beginPath();
+      c.strokeStyle = 'rgba(198,255,61,0.6)'; c.lineWidth = 1 * px; c.beginPath();
       for (const e of ends) { c.moveTo(v.pos.x, v.pos.y); c.lineTo(e.x, e.y); }
       c.stroke();
       c.fillStyle = LEAD;
       for (const e of ends) if (e.hit) { c.beginPath(); c.arc(e.x, e.y, 2.5 * px, 0, Math.PI * 2); c.fill(); }
-      c.strokeStyle = LEAD; c.lineWidth = 1.5 * px;
-      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(5, 12 * px), 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = LEAD; c.lineWidth = 1.5 * px; c.shadowColor = LEAD; c.shadowBlur = 10;
+      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(5, 12 * px), 0, Math.PI * 2); c.stroke(); c.shadowBlur = 0;
     }
 
     // contact: small fading dots, amber for scrapes and red for crashes (same language as the 3D sparks)
     this.flashes = this.flashes.filter((f) => ++f.age <= FLASH_FRAMES);
     for (const f of this.flashes) {
       const a = 1 - f.age / FLASH_FRAMES;
-      c.fillStyle = f.crash ? `rgba(229,72,77,${a})` : `rgba(240,180,76,${a * 0.8})`;
+      c.fillStyle = f.crash ? `rgba(255,45,85,${a})` : `rgba(255,176,32,${a * 0.85})`;
       c.beginPath(); c.arc(f.pos.x, f.pos.y, (f.crash ? 3.5 : 2.5) * px, 0, Math.PI * 2); c.fill();
     }
     c.restore();

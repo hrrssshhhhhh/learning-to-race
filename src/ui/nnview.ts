@@ -23,7 +23,7 @@ export function activations(b: Brain, input: number[]): number[][] {
 }
 
 // positive = green, negative = red; brightness = magnitude (so it does not rely on hue alone)
-const tint = (v: number, a: number) => (v >= 0 ? `rgba(110,231,160,${a})` : `rgba(255,107,107,${a})`);
+const tint = (v: number, a: number) => (v >= 0 ? `rgba(56,225,255,${a})` : `rgba(255,79,216,${a})`); // cyan +, magenta -
 
 /** Live diagram: nodes filled by activation, edges coloured by weight sign, thickness/opacity by magnitude. */
 export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[]): void {
@@ -47,12 +47,14 @@ export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[])
     for (let i = 0; i < n; i++) {
       const a = acts[l][i];
       c.beginPath(); c.arc(x(l), y(l, i), 5, 0, Math.PI * 2);
-      c.fillStyle = '#0f1115'; c.fill();
-      c.fillStyle = tint(a, 0.15 + 0.85 * Math.min(1, Math.abs(a))); c.fill();
-      c.strokeStyle = '#5a6070'; c.lineWidth = 1; c.stroke();
+      c.fillStyle = '#07080d'; c.fill();
+      const on = Math.min(1, Math.abs(a));
+      c.shadowColor = tint(a, 1); c.shadowBlur = 10 * on; // active neurons glow
+      c.fillStyle = tint(a, 0.15 + 0.85 * on); c.fill(); c.shadowBlur = 0;
+      c.strokeStyle = 'rgba(130,150,255,.35)'; c.lineWidth = 1; c.stroke();
     }
   });
-  c.fillStyle = '#a1a1a6';
+  c.fillStyle = '#9aa3c7';
   c.textAlign = 'right'; IN_LABELS.forEach((t, i) => c.fillText(t, x(0) - 9, y(0, i)));
   c.textAlign = 'left'; OUT_LABELS.forEach((t, i) => c.fillText(`${t} ${acts[L.length - 1][i].toFixed(2)}`, x(L.length - 1) + 9, y(L.length - 1, i)));
 }
