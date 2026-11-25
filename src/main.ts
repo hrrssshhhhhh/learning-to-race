@@ -37,7 +37,7 @@ async function restart(): Promise<void> {
   if (at !== track) return; // another Race replaced the track while the pre-trained file was loading
   const ok = start !== 'fresh' && kinds.every((k) => brains[k]);
   if (start !== 'fresh' && !ok) hud.notify('No saved vehicles found — starting fresh');
-  runStart = ok ? start : 'fresh'; testing = false;
+  runStart = ok ? start : 'fresh'; testing = false; controls.setTesting(false);
   app.world = make(kinds, ok ? brains : undefined);
   hud.transfer = runStart === 'mine' ? (scratch.get(key) ?? {}) : null;
 }
@@ -84,7 +84,7 @@ async function startTest(kind: VehicleKind): Promise<void> {
     { label: 'fresh', kind, brains: fresh },
     ...(mine ? [{ label: 'mine', kind, brains: mine }] : []),
   ];
-  testing = true; hud.transfer = null;
+  testing = true; hud.transfer = null; controls.setTesting(true);
   app.world = new World(track, { kinds: [], seed: Date.now(), frozen: true, contenders });
   // Keep training: same track, same contenders with their current brains, each now evolving as its own population
   hud.onKeepTraining = () => {

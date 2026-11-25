@@ -7,7 +7,7 @@ export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' 
 
 export function mountControls(
   root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
-): { sync(): void } {
+): { sync(): void; setTesting(on: boolean): void } {
   const radios = (name: string, legend: string, opts: [string, string][]) =>
     `<fieldset id="${name}"><legend class="show">${legend}</legend>${opts.map(([v, l]) =>
       `<label><input type="radio" name="${name}" value="${v}"> ${l}</label>`).join('')}</fieldset>`;
@@ -26,7 +26,7 @@ export function mountControls(
     <button type="button" id="test">Test on unseen track</button>
     <label for="test-kind" class="sr-only">Test with</label>
     <select id="test-kind"><option value="car">with cars</option><option value="bike">with bikes</option></select>
-    <fieldset><legend>Vehicles</legend>
+    <fieldset id="kinds"><legend>Vehicles</legend>
       <label><input type="checkbox" value="car" checked> Cars</label>
       <label><input type="checkbox" value="bike" checked> Bikes</label>
     </fieldset>
@@ -59,5 +59,11 @@ export function mountControls(
     actions.setKinds(on.map((b) => b.value as VehicleKind));
   };
   boxes.forEach((b) => b.addEventListener('change', onChange));
-  return { sync };
+  const kinds = root.querySelector<HTMLFieldSetElement>('#kinds')!;
+  // a test runs one kind chosen by "with cars/bikes"; ticking these would silently end it
+  const setTesting = (on: boolean) => {
+    kinds.disabled = on;
+    kinds.title = on ? 'Running a test on one vehicle type. Reset training to leave it.' : '';
+  };
+  return { sync, setTesting };
 }
