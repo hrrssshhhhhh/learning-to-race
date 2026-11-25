@@ -18,8 +18,9 @@ export interface VehicleSpec {
 // default track's hairpin/chicane without needing perfect braking; bike still keeps much less grip at speed than car.
 export const CAR: VehicleSpec = { kind: 'car', length: 4.5, width: 1.9, maxSpeed: 55, accel: 9, brake: 20, maxSteer: 0.6, steerAtSpeedFactor: 0.7, drag: 0.02 };
 // Bike: quicker off the line and narrower, but loses more steering as it speeds up.
-// Task 14: higher top speed (55->60) with the weaker brakes and grip, so bikes carry speed later into corners and
-// run wider than cars: the two kinds learn visibly different lines.
+// Task 14: higher top speed (55->60), so bikes lap faster (~32.5 s vs ~35.5 s on the default track).
+// Measured: both kinds still take every corner flat out on near-identical lines (gap < 1 m), because the model has
+// no sideways-grip limit. A bike-only grip cap gave different lines but cost the 120 s first-lap goal (3/5 seeds), so it was dropped.
 export const BIKE: VehicleSpec = { kind: 'bike', length: 2.1, width: 0.8, maxSpeed: 60, accel: 12, brake: 16, maxSteer: 0.7, steerAtSpeedFactor: 0.45, drag: 0.02 };
 export const SPECS: Record<VehicleKind, VehicleSpec> = { car: CAR, bike: BIKE };
 
