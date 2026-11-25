@@ -9,6 +9,7 @@ import { CameraRig } from './render3d/camera';
 import { Editor } from './editor/editor';
 import { mountControls, type AppState } from './ui/controls';
 import { Hud } from './ui/hud';
+import { mountLanding } from './ui/landing';
 import type { Vec2 } from './sim/vec';
 import { LAYERS, createBrain, type Brain } from './ml/nn';
 import { POP_SIZE } from './sim/world';
@@ -43,7 +44,7 @@ async function restart(): Promise<void> {
 }
 
 const root = document.getElementById('app')!;
-root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><div id="controls"></div><aside id="panel" aria-label="Training stats"></aside><canvas id="editor"></canvas>';
+root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d" data-lenis-prevent></div><div id="controls"></div><aside id="panel" aria-label="Training stats" data-lenis-prevent></aside><canvas id="editor"></canvas>';
 const stage2d = root.querySelector<HTMLCanvasElement>('#stage')!, stage3d = root.querySelector<HTMLElement>('#stage3d')!;
 const view = new View2D(stage2d);
 view.setTrack(track);
@@ -99,6 +100,11 @@ const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (co
   scene3d?.setTrack(track);
   rig?.setTrack(track);
   if (scene3d) { app.view = '2d'; swoopNext = true; controls.sync(); } // one 2D frame, then swoop into 3D
+});
+
+mountLanding({
+  status: () => document.querySelector('.title p')?.textContent ?? '',
+  draw: () => { testKind = null; editor.open(); },
 });
 
 let last = performance.now();

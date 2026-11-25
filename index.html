@@ -8,7 +8,7 @@
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/20px system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px system-ui, -apple-system, "Segoe UI", sans-serif; overscroll-behavior: none; }
   button, select, input { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--lead); outline-offset: 2px; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -18,6 +18,31 @@
   body.panel-open { --side: 320px; }
   @media (max-width: 760px) { body.panel-open { --side: 0px; } }
   #app { position: fixed; inset: 0; }
+  body.at-hero { --side: 0px; } /* the live sim fills the screen behind the hero */
+
+  /* landing hero: the running simulation is the visual, a neutral scrim keeps the text side calm */
+  .landing-space { height: 200vh; } /* one screen of scroll drives the hero -> app transition */
+  .hero { position: fixed; inset: 0; z-index: 20; }
+  .hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,20,21,.7) 0, rgba(20,20,21,0) 120px), linear-gradient(90deg, rgba(20,20,21,.95) 0%, rgba(20,20,21,.86) 36%, rgba(20,20,21,.4) 68%, rgba(20,20,21,.18) 100%); }
+  .hero-nav { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; }
+  .hero-mark { font-size: 16px; line-height: 24px; font-weight: 500; }
+  .hero-nav a { color: var(--text-2); text-decoration: none; transition: color .15s var(--ease); }
+  .hero-nav a:hover { color: var(--text); }
+  .hero-copy { position: absolute; top: 0; bottom: 0; left: 32px; right: 32px; max-width: 720px; display: flex; flex-direction: column; justify-content: center; padding-bottom: 6vh; }
+  .hero h1 { margin: 0 0 24px; font-size: clamp(36px, 4.6vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.03em; }
+  .hero-sub { margin: 0 0 32px; max-width: 36rem; color: var(--text-2); font-size: 18px; line-height: 28px; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .hero-btn { height: 44px; padding: 0 20px; font-size: 15px; }
+  .hero-live { margin: 24px 0 0; color: var(--muted); font-size: 12px; line-height: 16px; min-height: 16px; }
+  .hero-cue { position: absolute; left: 32px; bottom: 24px; margin: 0; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+  .hero-cue::before { content: ""; width: 24px; height: 1px; background: var(--muted); }
+  @media (max-width: 760px) {
+    .hero-nav { padding: 16px 20px; }
+    .hero-copy { left: 20px; right: 20px; padding-bottom: 12vh; }
+    .hero-sub { font-size: 16px; line-height: 24px; }
+    .hero-cue { left: 20px; }
+    .hero-scrim { background: linear-gradient(180deg, rgba(20,20,21,.7) 0%, rgba(20,20,21,.92) 55%, rgba(20,20,21,.95) 100%); }
+  }
   #stage, #stage3d { position: fixed; top: 0; left: 0; height: 100%; width: calc(100% - var(--side, 0px)); display: block; }
 
   /* shared controls */
