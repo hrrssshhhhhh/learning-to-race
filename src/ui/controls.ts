@@ -18,7 +18,7 @@ export function mountControls(
     <select id="start">
       <option value="fresh">Fresh (random brains)</option>
       <option value="mine">My vehicles</option>
-      <option value="generalist">Generalist</option>
+      <option value="specialist">Pre-trained (default track)</option>
     </select>
     <button type="button" id="reset">Reset training</button>
     <button type="button" id="keep">Keep my vehicles</button>

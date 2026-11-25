@@ -3,7 +3,7 @@ import type { VehicleKind } from '../sim/vehicle';
 
 /** One population on disk: same format for shipped brains (public/brains) and the user's saved ones (localStorage). */
 export interface PopulationFile { version: 1; kind: VehicleKind; layers: number[]; brains: number[][] }
-export type StartPoint = 'fresh' | 'mine' | 'generalist';
+export type StartPoint = 'fresh' | 'mine' | 'specialist';
 
 export function toFile(kind: VehicleKind, brains: Brain[]): PopulationFile {
   return { version: 1, kind, layers: LAYERS.slice(), brains: brains.map((b) => Array.from(b.weights)) };
@@ -31,7 +31,7 @@ export function loadMyVehicles(kind: VehicleKind, storage = local()): Brain[] | 
   try { return fromFile(JSON.parse(storage!.getItem(key(kind)) ?? 'null')); } catch { return null; }
 }
 
-export async function loadShipped(name: 'specialist' | 'generalist', kind: VehicleKind): Promise<Brain[] | null> {
+export async function loadShipped(name: 'specialist', kind: VehicleKind): Promise<Brain[] | null> {
   try {
     const r = await fetch(`${import.meta.env.BASE_URL}brains/${name}-${kind}.json`);
     return r.ok ? fromFile(await r.json()) : null;

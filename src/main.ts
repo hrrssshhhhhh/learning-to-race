@@ -27,10 +27,10 @@ let kinds: VehicleKind[] = ['car', 'bike'];
 async function restart(): Promise<void> {
   const start = app.start, at = track, brains: Partial<Record<VehicleKind, Brain[]>> = {};
   for (const k of kinds) {
-    const b = start === 'fresh' ? null : start === 'mine' ? loadMyVehicles(k) : await loadShipped('generalist', k);
+    const b = start === 'fresh' ? null : start === 'mine' ? loadMyVehicles(k) : await loadShipped('specialist', k);
     if (b) brains[k] = b;
   }
-  if (at !== track) return; // another Race replaced the track while the generalist was loading
+  if (at !== track) return; // another Race replaced the track while the pre-trained file was loading
   const ok = start !== 'fresh' && kinds.every((k) => brains[k]);
   if (start !== 'fresh' && !ok) hud.notify('No saved vehicles found — starting fresh');
   runStart = ok ? start : 'fresh';
