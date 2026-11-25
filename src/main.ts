@@ -9,11 +9,34 @@ import { CameraRig } from './render3d/camera';
 import { Editor } from './editor/editor';
 import { mountControls, type AppState } from './ui/controls';
 import { Hud } from './ui/hud';
+import type { Vec2 } from './sim/vec';
+import type { Brain } from './ml/nn';
+import { loadMyVehicles, loadShipped, saveMyVehicles, type StartPoint } from './storage/brains';
 
 let track = buildTrack(DEFAULT_TRACK); // the track in play; Race replaces it
-const make = (kinds: VehicleKind[]) => new World(track, { kinds, seed: Date.now() });
-const app: AppState = { world: make(['car', 'bike']), speed: 1, view: '3d', camera: 'chase' };
+// Transfer stat: first-lap generation of fresh runs, per track (in memory; key = rounded control points)
+const trackKey = (c: Vec2[]) => c.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+let key = trackKey(DEFAULT_TRACK), runStart: StartPoint = 'fresh';
+const scratch = new Map<string, Partial<Record<VehicleKind, number>>>();
+const make = (kinds: VehicleKind[], initialBrains?: Partial<Record<VehicleKind, Brain[]>>) =>
+  new World(track, { kinds, seed: Date.now(), initialBrains });
+const app: AppState = { world: make(['car', 'bike']), speed: 1, view: '3d', camera: 'chase', start: 'fresh' };
 let kinds: VehicleKind[] = ['car', 'bike'];
+
+/** New run on the current track from the chosen starting point; any missing source falls back to fresh. */
+async function restart(): Promise<void> {
+  const start = app.start, at = track, brains: Partial<Record<VehicleKind, Brain[]>> = {};
+  for (const k of kinds) {
+    const b = start === 'fresh' ? null : start === 'mine' ? loadMyVehicles(k) : await loadShipped('generalist', k);
+    if (b) brains[k] = b;
+  }
+  if (at !== track) return; // another Race replaced the track while the generalist was loading
+  const ok = start !== 'fresh' && kinds.every((k) => brains[k]);
+  if (start !== 'fresh' && !ok) hud.notify('No saved vehicles found — starting fresh');
+  runStart = ok ? start : 'fresh';
+  app.world = make(kinds, ok ? brains : undefined);
+  hud.transfer = runStart === 'mine' ? (scratch.get(key) ?? {}) : null;
+}
 
 const root = document.getElementById('app')!;
 root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><aside id="panel" aria-label="Training stats"></aside><div id="controls"></div><canvas id="editor"></canvas>';
@@ -34,15 +57,19 @@ if (import.meta.env.DEV) Object.assign(window, { slv: { app, scene3d, rig } }); 
 
 const hud = new Hud(root.querySelector<HTMLElement>('#panel')!);
 const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, app, {
-  reset: () => { app.world = make(kinds); },
-  setKinds: (k) => { kinds = k; app.world = make(k); },
+  reset: () => void restart(),
+  setKinds: (k) => { kinds = k; void restart(); },
   draw: () => editor.open(),
+  keep: () => {
+    const ok = app.world.populations.every((p) => saveMyVehicles(p.kind, p.brains));
+    hud.notify(ok ? 'Vehicles saved in this browser' : 'Could not save: browser storage is blocked');
+  },
 });
 if (!scene3d) root.querySelector<HTMLFieldSetElement>('#view')!.disabled = true;
 let swoopNext = false;
 const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (control) => {
-  track = buildTrack(control);
-  app.world = make(kinds);
+  track = buildTrack(control); key = trackKey(control);
+  void restart();
   view.setTrack(track);
   scene3d?.setTrack(track);
   rig?.setTrack(track);
@@ -56,6 +83,10 @@ function frame(now: number): void {
   if (!editor.isOpen) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
   scene3d?.effects.add(events, app.view === '3d'); // marks accumulate in 2D too; sparks only while visible
   const w = app.world;
+  if (runStart === 'fresh') for (const p of w.populations) { // remember the from-scratch baseline for this track
+    const s = scratch.get(key) ?? {};
+    if (p.firstLapGeneration !== null && s[p.kind] === undefined) { s[p.kind] = p.firstLapGeneration; scratch.set(key, s); }
+  }
   hud.update(w); // first: clamps hud.focus when the world changes
   const focus = { pop: hud.focus, vehicle: w.leader(w.populations[hud.focus]) }, lead = w.populations[focus.pop].vehicles[focus.vehicle];
   // only the visible renderer draws

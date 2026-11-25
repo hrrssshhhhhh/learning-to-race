@@ -1,11 +1,12 @@
 import type { VehicleKind } from '../sim/vehicle';
 import type { World } from '../sim/world';
 import type { CameraMode } from '../render3d/camera';
+import type { StartPoint } from '../storage/brains';
 
-export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode }
+export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint }
 
 export function mountControls(
-  root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void },
+  root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void },
 ): { sync(): void } {
   const radios = (name: string, legend: string, opts: [string, string][]) =>
     `<fieldset id="${name}"><legend class="show">${legend}</legend>${opts.map(([v, l]) =>
@@ -13,7 +14,14 @@ export function mountControls(
   root.innerHTML = `
     <label for="speed">Speed <output id="speed-out">${app.speed}x</output></label>
     <input id="speed" type="range" min="1" max="10" step="1" value="${app.speed}">
+    <label for="start">Start from</label>
+    <select id="start">
+      <option value="fresh">Fresh (random brains)</option>
+      <option value="mine">My vehicles</option>
+      <option value="generalist">Generalist</option>
+    </select>
     <button type="button" id="reset">Reset training</button>
+    <button type="button" id="keep">Keep my vehicles</button>
     <button type="button" id="draw">Draw track</button>
     <fieldset><legend>Vehicles</legend>
       <label><input type="checkbox" value="car" checked> Cars</label>
@@ -25,6 +33,10 @@ export function mountControls(
   speed.addEventListener('input', () => { app.speed = +speed.value; out.textContent = app.speed + 'x'; });
   root.querySelector('#reset')!.addEventListener('click', () => actions.reset());
   root.querySelector('#draw')!.addEventListener('click', () => actions.draw());
+  root.querySelector('#keep')!.addEventListener('click', () => actions.keep());
+  const start = root.querySelector<HTMLSelectElement>('#start')!;
+  start.value = app.start; // applies to the next Restart or Race, not the run in progress
+  start.addEventListener('change', () => { app.start = start.value as StartPoint; });
   const view = root.querySelector<HTMLFieldSetElement>('#view')!, cam = root.querySelector<HTMLFieldSetElement>('#camera')!;
   // main changes view/camera too (Race swoops into 3D chase), so radios mirror app state rather than own it
   const sync = () => {

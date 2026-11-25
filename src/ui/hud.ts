@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
 import { DT, type World } from '../sim/world';
-import { SPECS } from '../sim/vehicle';
+import { SPECS, type VehicleKind } from '../sim/vehicle';
 import { RAY_ANGLES, sensorInputs } from '../sim/sensors';
 import { LAYERS } from '../ml/nn';
 import { COLORS } from '../render2d/view2d';
@@ -14,12 +14,14 @@ const secs = (ticks: number | null) => (ticks === null ? '–' : `${(ticks * DT)
 const cps = (cp: number, n: number) => (cp < n ? `${cp}/${n}` : `lap ${Math.floor(cp / n) + 1}: ${cp % n}/${n}`);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-interface Card { gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLMeterElement }
+interface Card { xfer: HTMLElement; gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLMeterElement }
 
 /** Side panel: spec strip, one card per population, best-per-generation chart, the followed leader's live net. */
 export class Hud {
   /** Population index the camera, rays and net diagram follow. */
   focus = 0;
+  /** Set when the run started from the user's saved vehicles: first-lap generation of a fresh run on this track, if known. */
+  transfer: Partial<Record<VehicleKind, number>> | null = null;
   private world: World | null = null;
   private cards: Card[] = [];
   private bestCp: number[] = [];
@@ -80,11 +82,12 @@ export class Hud {
         <span class="row">Leader checkpoints <b data-k="cp"></b></span>
         <span class="row">Best ever <b data-k="best"></b></span>
         <span class="row">Best lap <b data-k="lap"></b></span>
+        <span class="row xfer" data-k="xfer" hidden></span>
         <span class="row">Leader damage <meter data-k="dmg" min="0" max="1" low="0.4" high="0.7" optimum="0"></meter></span>
       </label>`).join('');
     this.cards = [...this.pops.querySelectorAll('.card')].map((el) => {
       const q = <T extends HTMLElement>(k: string) => el.querySelector<T>(`[data-k="${k}"]`)!;
-      return { gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg: q<HTMLMeterElement>('dmg') };
+      return { xfer: q('xfer'), gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg: q<HTMLMeterElement>('dmg') };
     });
   }
 
@@ -103,6 +106,12 @@ export class Hud {
       card.best.textContent = cps(this.bestCp[i], n);
       card.lap.textContent = secs(lap);
       card.dmg.value = lead.damage;
+      card.xfer.hidden = !this.transfer;
+      if (this.transfer) {
+        const x = p.firstLapGeneration, y = this.transfer[p.kind];
+        card.xfer.textContent = x === null ? 'Carried over: no lap yet'
+          : `First lap in generation ${x + 1}` + (y === undefined ? '' : ` vs ${y + 1} from scratch`);
+      }
       if (p.firstLapGeneration !== null && !this.celebrated.has(i)) {
         this.celebrated.add(i);
         this.celebrate(`${name(p.label)}s learned the track in generation ${p.firstLapGeneration + 1}!`);
@@ -118,6 +127,9 @@ export class Hud {
     this.nnTitle.textContent = `${name(p.label)} leader's brain, live`;
     drawNN(this.nn, p.brains[w.leader(p)], sensorInputs(v, SPECS[p.kind], w.track));
   }
+
+  /** Short message in the banner slot, e.g. a save confirmation or a fallback notice. */
+  notify(text: string): void { this.celebrate(text); }
 
   /** Queued so two first laps in the same moment each get their own banner. */
   private celebrate(text: string): void {
