@@ -62,10 +62,11 @@ if (import.meta.env.DEV) Object.assign(window, { slv: { app, scene3d, rig } }); 
 
 const hud = new Hud(root.querySelector<HTMLElement>('#panel')!);
 const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, hud.trainingSlot, app, {
-  reset: () => void restart(),
+  reset: () => { void restart(); setRunning(true); },
   setKinds: (k) => { kinds = k; void restart(); },
   draw: () => { testKind = null; editor.open(); },
   test: (k) => { testKind = k; editor.open(); },
+  play: () => setRunning(!running),
   keep: () => {
     const ok = app.world.populations.every((p) => saveMyVehicles(p.kind, p.brains));
     hud.notify(ok ? 'Vehicles saved in this browser' : 'Could not save: browser storage is blocked');
@@ -73,6 +74,24 @@ const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, hu
 });
 if (!scene3d) root.querySelector<HTMLFieldSetElement>('#view')!.disabled = true;
 let swoopNext = false;
+
+// Nothing trains until the user starts it: from the hero, the grid card, the Start button, Space, or by racing a new track.
+let running = false, started = false;
+const startCard = document.createElement('div');
+startCard.className = 'start-card'; startCard.hidden = true;
+startCard.innerHTML = `<h2>On the grid</h2><p>200 random brains are lined up. Start, and watch the first generation crash, learn and try again</p>
+  <button type="button" class="btn primary hero-btn">Start training</button><small>or press Space</small>`;
+root.append(startCard);
+startCard.querySelector('button')!.addEventListener('click', () => setRunning(true));
+function setRunning(on: boolean): void {
+  running = on; started ||= on;
+  controls.setRunning(on);
+}
+window.addEventListener('keydown', (e) => {
+  const t = e.target as HTMLElement;
+  if (e.code !== 'Space' || editor.isOpen || landing.progress() < 1 || t.closest('select, button, textarea, input[type=text]')) return;
+  e.preventDefault(); setRunning(!running);
+});
 
 /** Frozen side-by-side test on the current track: pre-trained, fresh (random brains, the baseline) and yours if saved. */
 async function startTest(kind: VehicleKind): Promise<void> {
@@ -96,14 +115,15 @@ async function startTest(kind: VehicleKind): Promise<void> {
 const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (control) => {
   track = buildTrack(control); key = trackKey(control);
   if (testKind) { void startTest(testKind); testKind = null; } else void restart();
+  setRunning(true); // pressing Race is the user's go
   view.setTrack(track);
   scene3d?.setTrack(track);
   rig?.setTrack(track);
   if (scene3d) { app.view = '2d'; swoopNext = true; controls.sync(); } // one 2D frame, then swoop into 3D
 });
 
-mountLanding({
-  status: () => document.querySelector('.title p')?.textContent ?? '',
+const landing = mountLanding({
+  start: () => setRunning(true),
   draw: () => { testKind = null; editor.open(); },
 });
 
@@ -111,7 +131,8 @@ let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; // camera only; the sim is fixed-step
   const events: ContactEvent[] = [];
-  if (!editor.isOpen) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
+  startCard.hidden = started || editor.isOpen || landing.progress() < 1;
+  if (!editor.isOpen && running) for (let i = 0; i < app.speed; i++) events.push(...app.world.step()); // fixed timestep: speed = steps per frame
   scene3d?.effects.add(events, app.view === '3d'); // marks accumulate in 2D too; sparks only while visible
   const w = app.world;
   if (runStart === 'fresh' && !testing) for (const p of w.populations) { // remember the from-scratch baseline for this track
@@ -132,7 +153,9 @@ function frame(now: number): void {
   } else if (scene3d && rig && !editor.isOpen) {
     if (rig.mode !== app.camera) rig.setMode(app.camera);
     rig.follow(lead.pos, lead.heading);
-    rig.update(dt);
+    const p = landing.progress();
+    if (p < 1 && app.camera === 'chase') rig.intro(p, now / 1000); // the landing's scroll flies the camera onto the grid
+    else rig.update(dt);
     scene3d.render(w, dt, focus);
   }
   requestAnimationFrame(frame);

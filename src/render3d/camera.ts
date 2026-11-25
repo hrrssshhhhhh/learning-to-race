@@ -85,6 +85,21 @@ export class CameraRig {
     this.chaseReady = true;
   }
 
+  /**
+   * Landing intro, driven by scroll: p = 0 is a slow aerial orbit of the whole circuit, p = 1 is exactly the chase
+   * view behind the followed vehicle, so handing back to update() afterwards does not jump. t (s) adds a slow drift.
+   */
+  intro(p: number, t: number): void {
+    this.chasePose(1); // snap the end pose to the vehicle on the grid
+    const e = p * p * (3 - 2 * p), a = 0.6 + t * 0.04 + p * 1.6, R = this.size * 0.72, H = this.size * 0.42;
+    this.v.set(this.center.x + Math.cos(a) * R, H, this.center.z + Math.sin(a) * R);
+    this.camera.position.lerpVectors(this.v, this.chasePos, e);
+    this.camera.up.copy(Y);
+    this.camera.lookAt(this.u.lerpVectors(this.center, this.chaseLook, e));
+    this.camera.near = Math.max(0.5, this.camera.position.y * 0.05);
+    this.camera.updateProjectionMatrix();
+  }
+
   update(dt: number): void {
     if (this.swoop) {
       const s = this.swoop, t = Math.min(1, (performance.now() - s.t0) / s.ms), e = ease(t);

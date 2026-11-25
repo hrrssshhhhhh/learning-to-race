@@ -6,15 +6,18 @@ import type { StartPoint } from '../storage/brains';
 export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint }
 
 export function mountControls(
-  root: HTMLElement, training: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
-): { sync(): void; setTesting(on: boolean): void } {
+  root: HTMLElement, training: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void; play(): void },
+): { sync(): void; setTesting(on: boolean): void; setRunning(on: boolean): void } {
   // radios and checkboxes render as segmented toggles; the legend stays for screen readers, the label span is visual
   const seg = (name: string, legend: string, type: 'radio' | 'checkbox', opts: [string, string][], checked = false) =>
     `<fieldset id="${name}" class="seg"><legend class="sr-only">${legend}</legend>${opts.map(([v, l]) =>
       `<label><input type="${type}" name="${name}" value="${v}"${checked ? ' checked' : ''}>${l}</label>`).join('')}</fieldset>`;
   root.innerHTML = `
+    <div class="group">
+      <button type="button" class="btn primary play" id="play" aria-pressed="false">Start</button>
+    </div>
     <div class="group" role="group" aria-label="Track">
-      <button type="button" class="btn primary" id="draw">Draw track</button>
+      <button type="button" class="btn" id="draw">Draw track</button>
       <button type="button" class="btn" id="test">Test on new track</button>
       <label for="test-kind" class="sr-only">Test with</label>
       <select id="test-kind" class="btn"><option value="car">with cars</option><option value="bike">with bikes</option></select>
@@ -46,6 +49,7 @@ export function mountControls(
   speed.addEventListener('input', () => { app.speed = +speed.value; out.textContent = app.speed + 'x'; });
   training.querySelector('#reset')!.addEventListener('click', () => actions.reset());
   root.querySelector('#draw')!.addEventListener('click', () => actions.draw());
+  root.querySelector('#play')!.addEventListener('click', () => actions.play());
   training.querySelector('#keep')!.addEventListener('click', () => actions.keep());
   const testKind = root.querySelector<HTMLSelectElement>('#test-kind')!;
   root.querySelector('#test')!.addEventListener('click', () => actions.test(testKind.value as VehicleKind));
@@ -75,5 +79,12 @@ export function mountControls(
     kinds.disabled = on;
     kinds.title = on ? 'Running a test on one vehicle type. Restart to leave it.' : '';
   };
-  return { sync, setTesting };
+  const play = root.querySelector<HTMLButtonElement>('#play')!;
+  // one button: primary "Start" while stopped (the action that matters then), quiet "Pause" while running
+  const setRunning = (on: boolean) => {
+    play.textContent = on ? 'Pause' : 'Start';
+    play.classList.toggle('primary', !on);
+    play.setAttribute('aria-pressed', String(on));
+  };
+  return { sync, setTesting, setRunning };
 }
