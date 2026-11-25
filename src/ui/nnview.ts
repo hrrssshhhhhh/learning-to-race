@@ -42,7 +42,7 @@ export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[])
     }
     k += nIn * nOut + nOut;
   }
-  c.font = '10px system-ui, sans-serif'; c.textBaseline = 'middle';
+  c.font = '11px ui-monospace, Consolas, monospace'; c.textBaseline = 'middle';
   L.forEach((n, l) => {
     for (let i = 0; i < n; i++) {
       const a = acts[l][i];
@@ -52,7 +52,7 @@ export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[])
       c.strokeStyle = '#5a6070'; c.lineWidth = 1; c.stroke();
     }
   });
-  c.fillStyle = '#c3c7d1';
+  c.fillStyle = '#a1a1a6';
   c.textAlign = 'right'; IN_LABELS.forEach((t, i) => c.fillText(t, x(0) - 9, y(0, i)));
   c.textAlign = 'left'; OUT_LABELS.forEach((t, i) => c.fillText(`${t} ${acts[L.length - 1][i].toFixed(2)}`, x(L.length - 1) + 9, y(L.length - 1, i)));
 }

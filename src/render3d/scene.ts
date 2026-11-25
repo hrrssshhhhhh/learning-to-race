@@ -131,7 +131,7 @@ export class Scene3D {
   private rays = new THREE.LineSegments(
     new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(RAY_ANGLES.length * 6), 3)),
     new THREE.LineBasicMaterial({ color: 0x6ee7a0 }));
-  private marker = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.8, 12).rotateX(Math.PI),
+  private marker = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 12).rotateX(Math.PI),
     new THREE.MeshBasicMaterial({ color: 0x6ee7a0 }));
 
   /** Throws if WebGL is unavailable; the caller falls back to 2D. */
@@ -221,7 +221,7 @@ export class Scene3D {
         arr.setXYZ(2 * i + 1, v.pos.x + Math.cos(a) * d, 0.6, v.pos.y + Math.sin(a) * d);
       });
       arr.needsUpdate = true;
-      this.marker.position.set(v.pos.x, 3.2, v.pos.y);
+      this.marker.position.set(v.pos.x, 2.6, v.pos.y);
     }
     this.renderer.render(this.scene, this.camera);
   }

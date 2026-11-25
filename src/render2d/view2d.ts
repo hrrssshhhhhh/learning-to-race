@@ -64,7 +64,7 @@ export class View2D {
     c.lineJoin = 'round';
     // road: outer filled, inner punched out
     c.fillStyle = '#2a2d34'; this.line(t.outer); c.fill();
-    c.fillStyle = '#0f1115'; this.line(t.inner); c.fill();
+    c.fillStyle = '#141415'; this.line(t.inner); c.fill(); // = page background
     c.strokeStyle = '#8a8f9c'; c.lineWidth = 2 * px; this.line(t.outer); c.stroke(); this.line(t.inner); c.stroke();
     const s = t.checkpoints[0];
     c.strokeStyle = '#fff'; c.lineWidth = 3 * px; this.line([s.a, s.b], false); c.stroke();

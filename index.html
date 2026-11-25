@@ -1,47 +1,108 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Self-Learning Vehicles</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0f1115; color: #e6e8ee; font: 14px system-ui, sans-serif; overflow: hidden; }
+  /* Graphite ramp (night timing screen). Green is reserved for the leader the net drives; car blue and bike orange are data. */
+  :root {
+    --deep: #0f0f10; --bg: #141415; --card: #19191b; --raised: #232325; --line: rgba(237,237,237,.08); --line-strong: rgba(237,237,237,.14);
+    --text: #ededed; --text-2: #a1a1a6; --muted: #85858b; --lead: #6ee7a0; --warn: #f0b44c; --bad: #e5484d;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/20px system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  button, select, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--lead); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .fig { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
   /* --side: width the open stats panel takes from the canvases (0 on narrow screens, where it overlays instead) */
   body.panel-open { --side: 320px; }
   @media (max-width: 760px) { body.panel-open { --side: 0px; } }
   #app { position: fixed; inset: 0; }
   #stage, #stage3d { position: fixed; top: 0; left: 0; height: 100%; width: calc(100% - var(--side, 0px)); display: block; }
-  #panel { position: fixed; top: 0; right: 0; z-index: 5; font-variant-numeric: tabular-nums; }
-  body.panel-open #panel { bottom: 0; width: 320px; max-width: 100%; box-sizing: border-box; overflow-y: auto; background: rgba(21,24,33,.95); border-left: 1px solid #2a2f3a; padding: 10px 14px; }
-  body:not(.panel-open) #panel { top: 8px; right: 12px; }
-  body:not(.panel-open) .panel-body { display: none; }
-  .panel-toggle { font: inherit; padding: 4px 10px; float: right; }
-  .spec { margin: 2px 0 12px; color: #c3c7d1; line-height: 1.4; }
-  #panel h2 { font-size: 13px; font-weight: 600; color: #9aa0ad; margin: 14px 0 6px; }
-  .card { display: block; border: 1px solid #2a2f3a; border-left: 4px solid var(--c); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
-  .card:has(input:checked) { background: #1d212b; border-color: #6ee7a0; border-left-color: var(--c); }
-  .card .head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
-  .card .head small { color: #9aa0ad; margin-left: auto; }
-  .card .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #c3c7d1; line-height: 1.5; }
-  .card .row b { color: #fff; }
-  .card .xfer { color: #6ee7a0; font-weight: 600; }
-  .card .done[hidden], .results[hidden] { display: none; }
-  .results { border: 1px solid #6ee7a0; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background: #16261d; }
-  .results p { margin: 0 0 8px; font-weight: 600; color: #fff; }
-  .results button { font: inherit; padding: 4px 10px; }
-  .card .xfer[hidden] { display: none; }
-  .card meter { width: 110px; }
+
+  /* shared controls */
+  .btn { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--raised); cursor: pointer; white-space: nowrap; transition: background-color .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); }
+  .btn:hover { background: #2c2c2f; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--text); color: var(--deep); border-color: transparent; font-weight: 500; }
+  .btn.primary:hover { background: #ffffff; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+  .btn.ghost:hover { background: var(--raised); color: var(--text); }
+  select.btn { padding: 0 8px; }
+  .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 10px; background: var(--deep); border: 1px solid var(--line); }
+  .seg label { position: relative; height: 26px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 8px; color: var(--text-2); cursor: pointer; transition: background-color .15s var(--ease), color .15s var(--ease); }
+  .seg label:hover { color: var(--text); }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg label:has(input:checked) { background: var(--raised); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .seg label:has(input:focus-visible) { outline: 2px solid var(--lead); outline-offset: 1px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  fieldset:disabled { opacity: .45; }
+  fieldset:disabled label, .seg label:has(input:disabled) { cursor: not-allowed; }
+
+  /* title over the canvas */
+  .title { position: fixed; top: 16px; left: 16px; z-index: 4; max-width: calc(100% - var(--side, 0px) - 160px); padding: 8px 12px; border-radius: 12px; background: rgba(20,20,21,.86); border: 1px solid var(--line); pointer-events: none; }
+  .title h1 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 500; }
+  .title p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 20px; }
+  body:has(#editor:not([hidden])) .title { display: none; } /* the editor has its own hint in that spot */
+
+  /* controls bar: groups never split; on narrow screens it becomes one swipeable strip */
+  #controls { position: fixed; left: 16px; right: calc(var(--side, 0px) + 16px); bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
+  #controls .group { display: flex; align-items: center; gap: 8px; }
+  #controls .group + .group { padding-left: 16px; border-left: 1px solid var(--line); }
+  #controls .lbl { color: var(--muted); font-size: 13px; }
+  #speed { width: 96px; accent-color: var(--text); }
+  #speed-out { display: inline-block; width: 28px; color: var(--text); }
+  @media (max-width: 760px) {
+    #controls { left: 8px; right: 8px; bottom: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    #controls .group { flex: none; }
+    .title { top: 8px; left: 8px; max-width: calc(100% - 140px); }
+  }
+
+  /* stats panel */
+  #panel { position: fixed; top: 0; right: 0; z-index: 5; }
+  body.panel-open #panel { bottom: 0; width: 320px; max-width: 100%; box-sizing: border-box; overflow-y: auto; background: var(--deep); border-left: 1px solid var(--line); padding: 16px; }
+  body:not(.panel-open) #panel { top: 16px; right: 16px; }
+  body:not(.panel-open) .panel-body, body:not(.panel-open) .spec { display: none; }
+  @media (max-width: 760px) { body:not(.panel-open) #panel { top: 8px; right: 8px; } }
+  .panel-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+  .spec { flex: 1; margin: 0; color: var(--text-2); font-size: 13px; line-height: 20px; }
+  #panel h2 { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--text-2); margin: 24px 0 8px; }
+  .card { display: block; position: relative; padding: 12px; margin-bottom: 8px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); cursor: pointer; transition: border-color .15s var(--ease), background-color .15s var(--ease); }
+  .card:hover { background: #1d1d1f; }
+  .card:has(input:checked) { border-color: rgba(110,231,160,.45); }
+  .card:has(input:focus-visible) { outline: 2px solid var(--lead); outline-offset: 2px; }
+  .card input[type=radio] { position: absolute; opacity: 0; pointer-events: none; }
+  .card .head { display: flex; align-items: center; gap: 8px; }
+  .card .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--c); }
+  .card .head b { font-weight: 500; }
+  .card .follow { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .card:has(input:checked) .follow { color: var(--lead); }
+  .card .figs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0; }
+  .card .figs small { display: block; font-size: 12px; line-height: 16px; color: var(--muted); }
+  .card .figs b { display: block; font-size: 24px; line-height: 28px; font-weight: 500; font-family: inherit; } /* tabular digits, not mono: mono is heavy at this size */
+  .card .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; line-height: 24px; }
+  .card .row b { color: var(--text); font-weight: 400; }
+  .card .xfer { color: var(--text); }
+  .card .done[hidden], .card .xfer[hidden], .results[hidden] { display: none; }
+  .dmg { width: 96px; height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+  .dmg i { display: block; height: 100%; background: var(--muted); transform-origin: left; transform: scaleX(0); }
+  .dmg[data-level="warn"] i { background: var(--warn); }
+  .dmg[data-level="bad"] i { background: var(--bad); }
+  .results { padding: 12px; margin-bottom: 8px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-strong); }
+  .results p { margin: 0 0 12px; color: var(--text); }
   #panel canvas { display: block; width: 100%; }
-  #panel .chart { height: 120px; }
-  #panel .nn { height: 200px; }
-  .celebrate { position: fixed; top: 24px; left: calc((100% - var(--side, 0px)) / 2); z-index: 6; pointer-events: none; visibility: hidden; padding: 12px 22px; border-radius: 12px; background: #6ee7a0; color: #0f1115; font-size: 20px; font-weight: 700; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
-  #controls { position: fixed; bottom: 8px; left: 12px; max-width: calc(100% - var(--side, 0px) - 48px); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: rgba(15,17,21,.8); padding: 8px 12px; border-radius: 8px; }
-  #controls fieldset { border: 0; margin: 0; padding: 0; display: flex; gap: 12px; }
-  #controls legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  #controls legend.show { position: static; width: auto; height: auto; overflow: visible; clip: auto; float: left; padding: 0; color: #9aa0ad; }
-  #controls fieldset:disabled { opacity: .45; }
-  #controls button { font: inherit; padding: 4px 10px; }
-  #editor { position: fixed; inset: 0; width: 100%; height: 100%; background: #0f1115; z-index: 10; cursor: crosshair; }
-  #editor[hidden], .editor-panel[hidden] { display: none; }
-  .editor-panel { position: fixed; bottom: 8px; left: 12px; z-index: 11; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(15,17,21,.8); padding: 8px 12px; border-radius: 8px; }
-  .editor-panel button { font: inherit; padding: 4px 10px; }
-  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .editor-msg { margin: 0; color: #ff8a80; font-weight: 600; }
+  #panel .chart { height: 140px; }
+  #panel .nn { height: 216px; }
+
+  /* banner: first laps and notices */
+  .celebrate { position: fixed; top: 16px; left: calc((100% - var(--side, 0px)) / 2); z-index: 6; pointer-events: none; visibility: hidden; padding: 12px 20px; border-radius: 12px; background: var(--raised); border: 1px solid var(--line-strong); color: var(--text); font-size: 16px; line-height: 24px; font-weight: 500; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+
+  /* track editor */
+  #editor { position: fixed; inset: 0; width: 100%; height: 100%; background: var(--bg); z-index: 10; cursor: crosshair; }
+  #editor[hidden], .editor-panel[hidden], .editor-hint[hidden] { display: none; }
+  .editor-panel { position: fixed; left: 16px; bottom: 16px; z-index: 11; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
+  .editor-hint { position: fixed; top: 16px; left: 16px; z-index: 11; margin: 0; padding: 8px 12px; border-radius: 12px; background: rgba(20,20,21,.86); border: 1px solid var(--line); color: var(--text-2); }
+  .editor-hint b { color: var(--text); font-weight: 500; }
+  .editor-msg { margin: 0 0 0 8px; color: #ff8a80; }
 </style></head>
 <body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>

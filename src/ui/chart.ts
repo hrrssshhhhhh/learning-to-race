@@ -17,7 +17,7 @@ export function fitCanvas(canvas: HTMLCanvasElement): { c: CanvasRenderingContex
 /** Best fitness per generation as grouped bars (one bar per series per generation). A line would be too noisy. */
 export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   const { c, w, h } = fitCanvas(canvas);
-  c.font = '11px system-ui, sans-serif'; c.fillStyle = '#9aa0ad'; c.textAlign = 'left'; // context state persists between draws
+  c.font = '11px ui-monospace, Consolas, monospace'; c.fillStyle = '#85858b'; c.textAlign = 'left'; // context state persists between draws
   const n = Math.max(0, ...series.map((s) => s.points.length));
   if (!n) { c.fillText('Bars appear after the first generation ends', 4, h / 2); return; }
   const start = Math.max(0, n - MAX_GENS), gens = n - start;
@@ -27,7 +27,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   c.fillText(top.toFixed(0), L - 4, T + 9); c.fillText('0', L - 4, T + ph);
   c.textAlign = 'left'; c.fillText(`gen ${start + 1}`, L, h - 3);
   c.textAlign = 'right'; c.fillText(`gen ${n}`, w - 2, h - 3);
-  c.strokeStyle = '#3a3f4b'; c.beginPath(); c.moveTo(L, T + ph + 0.5); c.lineTo(w - 2, T + ph + 0.5); c.stroke();
+  c.strokeStyle = 'rgba(237,237,237,.08)'; c.beginPath(); c.moveTo(L, T + ph + 0.5); c.lineTo(w - 2, T + ph + 0.5); c.stroke();
   const group = pw / gens, bar = (group * 0.8) / series.length;
   series.forEach((s, k) => {
     c.fillStyle = s.color;

@@ -57,6 +57,7 @@ export class Editor {
   private ctx: CanvasRenderingContext2D;
   private panel = document.createElement('div');
   private msg = document.createElement('p');
+  private hint = document.createElement('p');
   private stroke: Vec2[] = [];            // what is shown, css px
   private loaded: Vec2[] | null = null;   // meters, when a random/default track is shown instead of a drawn stroke
   private mpp = EDITOR_METERS_PER_PX;
@@ -71,15 +72,17 @@ export class Editor {
     canvas.style.touchAction = 'none';
     canvas.setAttribute('aria-label', 'Track drawing area: draw a closed loop with the mouse or touch');
     this.panel.className = 'editor-panel';
-    this.panel.innerHTML = `<button type="button" data-a="race">Race</button>
-      <button type="button" data-a="random">Random track</button>
-      <button type="button" data-a="default">Default track</button>
-      <button type="button" data-a="clear">Clear</button>
-      <button type="button" data-a="cancel">Cancel</button>`;
+    this.panel.innerHTML = `<button type="button" class="btn primary" data-a="race">Race</button>
+      <button type="button" class="btn" data-a="random">Random track</button>
+      <button type="button" class="btn" data-a="default">Default track</button>
+      <button type="button" class="btn ghost" data-a="clear">Clear</button>
+      <button type="button" class="btn ghost" data-a="cancel">Cancel</button>`;
+    this.hint.className = 'editor-hint';
+    this.hint.innerHTML = '<b>Draw one closed loop</b> with the mouse or a finger. The walls appear when the track is valid';
     this.msg.setAttribute('role', 'alert');
     this.msg.className = 'editor-msg';
     this.panel.append(this.msg);
-    canvas.after(this.panel);
+    canvas.after(this.panel, this.hint);
     this.panel.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest('button')?.dataset.a;
       if (a === 'race') this.race();
@@ -126,7 +129,7 @@ export class Editor {
 
   private others(): HTMLElement[] { return [...(this.canvas.parentElement?.children ?? [])].filter((e) => e !== this.canvas && e !== this.panel) as HTMLElement[]; }
 
-  private setVisible(v: boolean): void { this.canvas.hidden = this.panel.hidden = !v; }
+  private setVisible(v: boolean): void { this.canvas.hidden = this.panel.hidden = this.hint.hidden = !v; }
   private pt(e: PointerEvent): Vec2 { const r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
   private control(): Vec2[] { return this.loaded ?? strokeToControlPoints(this.stroke, this.mpp); }
 
@@ -178,17 +181,22 @@ export class Editor {
     const c = this.ctx;
     c.clearRect(0, 0, this.w, this.h);
     if (!this.stroke.length) {
-      c.fillStyle = '#8a90a0'; c.font = '16px system-ui, sans-serif'; c.textAlign = 'center';
+      c.fillStyle = '#85858b'; c.font = '16px system-ui, sans-serif'; c.textAlign = 'center';
       c.fillText('Draw a loop with the mouse, then press Race', this.w / 2, this.h / 2);
       return;
     }
     const control = this.control();
-    if (!this.drawing && validateTrack(control).ok) { // live preview: the smoothed walls the cars will see
-      const t = buildTrack(control);
-      c.strokeStyle = '#cfd3dd'; c.lineWidth = 2;
-      for (const wall of [t.outer, t.inner]) { this.path(wall.map((p) => this.toPx(p)), true); c.stroke(); }
+    const valid = !this.drawing && validateTrack(control).ok;
+    if (valid) { // live preview: the road and smoothed walls the cars will see
+      const t = buildTrack(control), outer = t.outer.map((p) => this.toPx(p)), inner = t.inner.map((p) => this.toPx(p));
+      c.fillStyle = '#2a2b2f'; c.beginPath(); // both walls in one path: even-odd leaves the infield empty
+      for (const wall of [outer, inner]) { wall.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y))); c.closePath(); }
+      c.fill('evenodd');
+      c.strokeStyle = '#d6d6da'; c.lineWidth = 1.5;
+      for (const wall of [outer, inner]) { this.path(wall, true); c.stroke(); }
     }
-    c.strokeStyle = '#4aa3ff'; c.lineWidth = 2;
+    // the raw stroke: bright while drawing, faint once the preview shows what it became
+    c.strokeStyle = valid ? 'rgba(74,163,255,.35)' : '#4aa3ff'; c.lineWidth = 2;
     this.path(this.stroke, false); c.stroke();
   }
 }

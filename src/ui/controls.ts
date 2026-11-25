@@ -8,30 +8,39 @@ export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' 
 export function mountControls(
   root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
 ): { sync(): void; setTesting(on: boolean): void } {
-  const radios = (name: string, legend: string, opts: [string, string][]) =>
-    `<fieldset id="${name}"><legend class="show">${legend}</legend>${opts.map(([v, l]) =>
-      `<label><input type="radio" name="${name}" value="${v}"> ${l}</label>`).join('')}</fieldset>`;
+  // radios and checkboxes render as segmented toggles; the legend stays for screen readers, the label span is visual
+  const seg = (name: string, legend: string, type: 'radio' | 'checkbox', opts: [string, string][], checked = false) =>
+    `<fieldset id="${name}" class="seg"><legend class="sr-only">${legend}</legend>${opts.map(([v, l]) =>
+      `<label><input type="${type}" name="${name}" value="${v}"${checked ? ' checked' : ''}>${l}</label>`).join('')}</fieldset>`;
   root.innerHTML = `
-    <label for="speed">Speed <output id="speed-out">${app.speed}x</output></label>
-    <input id="speed" type="range" min="1" max="10" step="1" value="${app.speed}">
-    <label for="start">Start from</label>
-    <select id="start">
-      <option value="fresh">Fresh (random brains)</option>
-      <option value="mine">My vehicles</option>
-      <option value="specialist">Pre-trained (default track)</option>
-    </select>
-    <button type="button" id="reset">Reset training</button>
-    <button type="button" id="keep">Keep my vehicles</button>
-    <button type="button" id="draw">Draw track</button>
-    <button type="button" id="test">Test on unseen track</button>
-    <label for="test-kind" class="sr-only">Test with</label>
-    <select id="test-kind"><option value="car">with cars</option><option value="bike">with bikes</option></select>
-    <fieldset id="kinds"><legend>Vehicles</legend>
-      <label><input type="checkbox" value="car" checked> Cars</label>
-      <label><input type="checkbox" value="bike" checked> Bikes</label>
-    </fieldset>
-    ${radios('view', 'View', [['3d', '3D'], ['2d', '2D']])}
-    ${radios('camera', 'Camera', [['chase', 'Chase'], ['orbit', 'Orbit'], ['top', 'Top']])}`;
+    <div class="group" role="group" aria-label="Track">
+      <button type="button" class="btn primary" id="draw">Draw track</button>
+      <button type="button" class="btn" id="test">Test on unseen track</button>
+      <label for="test-kind" class="sr-only">Test with</label>
+      <select id="test-kind" class="btn"><option value="car">with cars</option><option value="bike">with bikes</option></select>
+    </div>
+    <div class="group" role="group" aria-label="Training">
+      <label for="start" class="lbl">Start from</label>
+      <select id="start" class="btn">
+        <option value="fresh">Fresh</option>
+        <option value="mine">My vehicles</option>
+        <option value="specialist">Pre-trained</option>
+      </select>
+      <button type="button" class="btn" id="reset">Reset training</button>
+      <button type="button" class="btn ghost" id="keep">Keep my vehicles</button>
+    </div>
+    <div class="group">
+      <label for="speed" class="lbl">Speed</label>
+      <input id="speed" type="range" min="1" max="10" step="1" value="${app.speed}">
+      <output id="speed-out" class="fig" for="speed">${app.speed}x</output>
+    </div>
+    <div class="group" role="group" aria-label="View">
+      ${seg('view', 'View', 'radio', [['3d', '3D'], ['2d', '2D']])}
+      ${seg('camera', 'Camera', 'radio', [['chase', 'Chase'], ['orbit', 'Orbit'], ['top', 'Top']])}
+    </div>
+    <div class="group">
+      ${seg('kinds', 'Vehicles', 'checkbox', [['car', 'Cars'], ['bike', 'Bikes']], true)}
+    </div>`;
   const speed = root.querySelector<HTMLInputElement>('#speed')!, out = root.querySelector('#speed-out')!;
   speed.addEventListener('input', () => { app.speed = +speed.value; out.textContent = app.speed + 'x'; });
   root.querySelector('#reset')!.addEventListener('click', () => actions.reset());
