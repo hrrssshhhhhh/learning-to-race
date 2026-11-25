@@ -15,7 +15,7 @@ export function mountControls(
   root.innerHTML = `
     <div class="group" role="group" aria-label="Track">
       <button type="button" class="btn primary" id="draw">Draw track</button>
-      <button type="button" class="btn" id="test">Test on unseen track</button>
+      <button type="button" class="btn" id="test">Test on new track</button>
       <label for="test-kind" class="sr-only">Test with</label>
       <select id="test-kind" class="btn"><option value="car">with cars</option><option value="bike">with bikes</option></select>
     </div>
@@ -26,21 +26,22 @@ export function mountControls(
         <option value="mine">My vehicles</option>
         <option value="specialist">Pre-trained</option>
       </select>
-      <button type="button" class="btn" id="reset">Reset training</button>
-      <button type="button" class="btn ghost" id="keep">Keep my vehicles</button>
+      <button type="button" class="btn" id="reset">Restart</button>
+      <button type="button" class="btn ghost" id="keep">Save vehicles</button>
     </div>
     <div class="group">
-      <label for="speed" class="lbl">Speed</label>
+      <label for="speed" class="sr-only">Simulation speed</label>
       <input id="speed" type="range" min="1" max="10" step="1" value="${app.speed}">
       <output id="speed-out" class="fig" for="speed">${app.speed}x</output>
-    </div>
-    <div class="group" role="group" aria-label="View">
-      ${seg('view', 'View', 'radio', [['3d', '3D'], ['2d', '2D']])}
-      ${seg('camera', 'Camera', 'radio', [['chase', 'Chase'], ['orbit', 'Orbit'], ['top', 'Top']])}
     </div>
     <div class="group">
       ${seg('kinds', 'Vehicles', 'checkbox', [['car', 'Cars'], ['bike', 'Bikes']], true)}
     </div>`;
+  // view controls sit on the canvas (top right), next to what they change, so the bottom bar fits one row
+  const viewbar = document.createElement('div');
+  viewbar.className = 'viewbar'; viewbar.setAttribute('role', 'group'); viewbar.setAttribute('aria-label', 'View');
+  viewbar.innerHTML = seg('view', 'View', 'radio', [['3d', '3D'], ['2d', '2D']]) + seg('camera', 'Camera', 'radio', [['chase', 'Chase'], ['orbit', 'Orbit'], ['top', 'Top']]);
+  root.before(viewbar);
   const speed = root.querySelector<HTMLInputElement>('#speed')!, out = root.querySelector('#speed-out')!;
   speed.addEventListener('input', () => { app.speed = +speed.value; out.textContent = app.speed + 'x'; });
   root.querySelector('#reset')!.addEventListener('click', () => actions.reset());
@@ -51,7 +52,7 @@ export function mountControls(
   const start = root.querySelector<HTMLSelectElement>('#start')!;
   start.value = app.start; // applies to the next Restart or Race, not the run in progress
   start.addEventListener('change', () => { app.start = start.value as StartPoint; });
-  const view = root.querySelector<HTMLFieldSetElement>('#view')!, cam = root.querySelector<HTMLFieldSetElement>('#camera')!;
+  const view = viewbar.querySelector<HTMLFieldSetElement>('#view')!, cam = viewbar.querySelector<HTMLFieldSetElement>('#camera')!;
   // main changes view/camera too (Race swoops into 3D chase), so radios mirror app state rather than own it
   const sync = () => {
     view.querySelector<HTMLInputElement>(`[value="${app.view}"]`)!.checked = true;
@@ -72,7 +73,7 @@ export function mountControls(
   // a test runs one kind chosen by "with cars/bikes"; ticking these would silently end it
   const setTesting = (on: boolean) => {
     kinds.disabled = on;
-    kinds.title = on ? 'Running a test on one vehicle type. Reset training to leave it.' : '';
+    kinds.title = on ? 'Running a test on one vehicle type. Restart to leave it.' : '';
   };
   return { sync, setTesting };
 }

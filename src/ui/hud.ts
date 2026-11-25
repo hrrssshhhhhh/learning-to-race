@@ -153,7 +153,7 @@ export class Hud {
     const len = w.populations.reduce((s, p) => s + p.history.length, 0);
     if (len !== this.chartLen) { // only redraw when a generation ends
       this.chartLen = len;
-      drawChart(this.chart, w.populations.map((p) => ({ label: p.label, color: popColor(p), points: p.history.map((g) => g.bestFitness) })));
+      drawChart(this.chart, w.populations.map((p) => ({ label: name(p.label), color: popColor(p), points: p.history.map((g) => g.bestFitness) })));
     }
     const p = w.populations[this.focus], v = p.vehicles[w.leader(p)];
     this.nnTitle.textContent = `${name(p.label)} leader's brain, live`;

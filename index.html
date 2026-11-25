@@ -45,17 +45,21 @@
   .title p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 20px; }
   body:has(#editor:not([hidden])) .title { display: none; } /* the editor has its own hint in that spot */
 
+  .viewbar { position: fixed; top: 16px; right: calc(var(--side, 0px) + 16px); z-index: 4; display: flex; gap: 8px; padding: 4px; border-radius: 14px; background: rgba(20,20,21,.86); border: 1px solid var(--line); }
+  body:not(.panel-open) .viewbar { right: 96px; } /* leave room for the Stats button */
+  body:has(#editor:not([hidden])) .viewbar { display: none; }
   /* controls bar: groups never split; on narrow screens it becomes one swipeable strip */
-  #controls { position: fixed; left: 16px; right: calc(var(--side, 0px) + 16px); bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
+  #controls { position: fixed; left: 16px; right: calc(var(--side, 0px) + 16px); bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 14px; background: rgba(20,20,21,.9); border: 1px solid var(--line); }
   #controls .group { display: flex; align-items: center; gap: 8px; }
-  #controls .group + .group { padding-left: 16px; border-left: 1px solid var(--line); }
+  #controls .group + .group { padding-left: 12px; border-left: 1px solid var(--line); }
   #controls .lbl { color: var(--muted); font-size: 13px; }
-  #speed { width: 96px; accent-color: var(--text); }
+  #speed { width: 72px; accent-color: var(--text); }
   #speed-out { display: inline-block; width: 28px; color: var(--text); }
   @media (max-width: 760px) {
     #controls { left: 8px; right: 8px; bottom: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     #controls .group { flex: none; }
     .title { top: 8px; left: 8px; max-width: calc(100% - 140px); }
+    .viewbar, body:not(.panel-open) .viewbar { top: auto; bottom: 72px; right: 8px; }
   }
 
   /* stats panel */

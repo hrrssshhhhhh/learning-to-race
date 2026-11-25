@@ -22,9 +22,19 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   if (!n) { c.fillText('Bars appear after the first generation ends', 4, h / 2); return; }
   const start = Math.max(0, n - MAX_GENS), gens = n - start;
   const top = Math.max(1, ...series.flatMap((s) => s.points.slice(start)));
-  const L = 30, B = 16, T = 6, pw = w - L - 2, ph = h - B - T;
+  const L = 30, B = 16, T = 24, pw = w - L - 2, ph = h - B - T; // T leaves a row for the legend
+  // legend, right-aligned: swatch + name per series
+  c.textAlign = 'left';
+  let lx = w - 2;
+  for (const s of [...series].reverse()) {
+    lx -= c.measureText(s.label).width;
+    c.fillStyle = '#a1a1a6'; c.fillText(s.label, lx, 12);
+    lx -= 14; c.fillStyle = s.color; c.fillRect(lx, 4, 8, 8);
+    lx -= 12;
+  }
+  c.fillStyle = '#85858b';
   c.textAlign = 'right';
-  c.fillText(top.toFixed(0), L - 4, T + 9); c.fillText('0', L - 4, T + ph);
+  c.fillText(top.toFixed(0), L - 4, T + 8); c.fillText('0', L - 4, T + ph);
   c.textAlign = 'left'; c.fillText(`gen ${start + 1}`, L, h - 3);
   c.textAlign = 'right'; c.fillText(`gen ${n}`, w - 2, h - 3);
   c.strokeStyle = 'rgba(237,237,237,.08)'; c.beginPath(); c.moveTo(L, T + ph + 0.5); c.lineTo(w - 2, T + ph + 0.5); c.stroke();

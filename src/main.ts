@@ -19,7 +19,7 @@ let track = buildTrack(DEFAULT_TRACK); // the track in play; Race replaces it
 // Transfer stat: first-lap generation of fresh runs, per track (in memory; key = rounded control points)
 const trackKey = (c: Vec2[]) => c.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
 let key = trackKey(DEFAULT_TRACK), runStart: StartPoint = 'fresh';
-let testKind: VehicleKind | null = null; // set by "Test on unseen track": the next editor Race runs a test instead
+let testKind: VehicleKind | null = null; // set by "Test on new track": the next editor Race runs a test instead
 let testing = false; // the current world is a test (or continues one): not a from-scratch baseline
 const scratch = new Map<string, Partial<Record<VehicleKind, number>>>();
 const make = (kinds: VehicleKind[], initialBrains?: Partial<Record<VehicleKind, Brain[]>>) =>
@@ -43,7 +43,7 @@ async function restart(): Promise<void> {
 }
 
 const root = document.getElementById('app')!;
-root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><aside id="panel" aria-label="Training stats"></aside><div id="controls"></div><canvas id="editor"></canvas>';
+root.innerHTML = '<canvas id="stage"></canvas><div id="stage3d"></div><div id="controls"></div><aside id="panel" aria-label="Training stats"></aside><canvas id="editor"></canvas>';
 const stage2d = root.querySelector<HTMLCanvasElement>('#stage')!, stage3d = root.querySelector<HTMLElement>('#stage3d')!;
 const view = new View2D(stage2d);
 view.setTrack(track);
