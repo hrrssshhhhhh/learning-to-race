@@ -119,7 +119,7 @@ export class Editor {
     for (const el of this.others()) el.inert = true;
   }
   close(): void {
-    this.opened = false; this.setVisible(false);
+    this.opened = false; this.drawing = false; this.setVisible(false); // Escape/Cancel mid-drag
     window.removeEventListener('resize', this.resizeHandler);
     for (const el of this.others()) el.inert = false;
   }
@@ -131,7 +131,7 @@ export class Editor {
   private control(): Vec2[] { return this.loaded ?? strokeToControlPoints(this.stroke, this.mpp); }
 
   private clear(): void {
-    this.stroke = []; this.loaded = null; this.msg.textContent = '';
+    this.stroke = []; this.loaded = null; this.msg.textContent = ''; this.drawing = false;
     this.fit = { k: 1 / this.mpp, ox: 0, oy: 0 }; this.draw();
   }
 
@@ -162,7 +162,7 @@ export class Editor {
     this.canvas.width = Math.round(this.w * dpr); this.canvas.height = Math.round(this.h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const mpp = metersPerPxFor(this.w, this.h);
-    if (mpp !== this.mpp && !this.loaded) { this.stroke = []; this.msg.textContent = ''; } // a drawn stroke can't be reinterpreted at a new scale
+    if (mpp !== this.mpp && !this.loaded) { this.stroke = []; this.drawing = false; this.msg.textContent = ''; } // a drawn stroke can't be reinterpreted at a new scale
     this.mpp = mpp;
     if (!this.loaded) this.fit = { k: 1 / this.mpp, ox: 0, oy: 0 };
     if (this.loaded) this.show(this.loaded); else this.draw();
