@@ -18,25 +18,20 @@ export function mountLanding(opts: { start(): void; draw(): void }): { progress(
     <div class="hero-scrim"></div>
     <nav class="hero-nav"><span class="hero-mark">Self-learning vehicles</span><a href="./results.html">How it works</a></nav>
     <div class="hero-copy">
+      <p class="hero-tag">Neuroevolution, written from scratch</p>
       <h1 id="hero-title" class="hero-h1">
-        <span class="ln"><span>They crash.</span></span>
-        <span class="ln"><span>They learn.</span></span>
-        <span class="ln"><span>They race.</span></span>
+        <span class="ln"><span>Learning</span></span>
+        <span class="ln"><span>to race</span></span>
       </h1>
-      <p class="hero-sub"><b class="c-car">100 cars</b> and <b class="c-bike">100 bikes</b>, each driven by its own small neural network and
-        evolved by a genetic algorithm. Draw any track and watch them master it, one crash at a time.</p>
+      <p class="hero-sub"><b class="c-car">100 cars</b> and <b class="c-bike">100 bikes</b> start with random brains and teach themselves
+        to drive any track you draw. Each has a small neural network; a genetic algorithm keeps the best and breeds the next generation.</p>
       <div class="hero-actions">
-        <button type="button" class="btn primary hero-btn" data-a="start">Start training</button>
+        <button type="button" class="btn primary hero-btn" data-a="start">Start the race</button>
         <button type="button" class="btn hero-btn" data-a="draw">Draw a track</button>
       </div>
-      <dl class="hero-facts">
-        <div><dt>Vehicles</dt><dd class="fig">200</dd></div>
-        <div><dt>Distance sensors</dt><dd class="fig">7</dd></div>
-        <div><dt>Neural net</dt><dd class="fig">8→10→2</dd></div>
-        <div><dt>ML libraries</dt><dd class="fig">0</dd></div>
-      </dl>
     </div>
-    <div class="hero-cue" aria-hidden="true"><span>Scroll to the grid</span><i><b></b></i></div>`;
+    <div class="hero-cue" aria-hidden="true"><span>Scroll to the grid</span><i><b></b></i></div>
+    <div class="hero-chequer" aria-hidden="true"></div>`;
   const space = document.createElement('div');
   space.className = 'landing-space'; // one screen of scroll drives the hero -> app transition
   document.body.prepend(hero);
@@ -66,7 +61,7 @@ export function mountLanding(opts: { start(): void; draw(): void }): { progress(
   if (!reduce) {
     gsap.timeline({ defaults: { ease: 'expo.out' } })
       .from('.hero-h1 .ln > span', { yPercent: 110, duration: 1.1, stagger: 0.12 })
-      .from('.hero-sub, .hero-actions, .hero-facts, .hero-nav, .hero-cue', { autoAlpha: 0, y: 12, duration: 0.8, stagger: 0.06 }, '-=0.7');
+      .from('.hero-tag, .hero-sub, .hero-actions, .hero-nav, .hero-cue, .hero-chequer', { autoAlpha: 0, y: 12, duration: 0.8, stagger: 0.06 }, '-=0.7');
   }
 
   // App chrome is hidden (and unfocusable, via autoAlpha) until the hero has gone
@@ -88,7 +83,7 @@ export function mountLanding(opts: { start(): void; draw(): void }): { progress(
   // lines leave at slightly different speeds, so the headline peels apart as the camera dives
   tl.to('.hero-h1 .ln', { y: (i) => -60 * m * (i + 1), autoAlpha: 0, duration: 0.45, stagger: 0.04 }, 0)
     // explicit start values + immediateRender false: these elements also have the load entrance, which must not be overwritten
-    .fromTo('.hero-sub, .hero-actions, .hero-facts', { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -40 * m, duration: 0.4, immediateRender: false }, 0.05)
+    .fromTo('.hero-tag, .hero-sub, .hero-actions, .hero-chequer', { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -40 * m, duration: 0.4, immediateRender: false }, 0.05)
     .fromTo('.hero-nav', { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.3, immediateRender: false }, 0)
     .to('.hero-cue b', { scaleX: 1, duration: 0.6 }, 0) // the cue's bar fills as you scroll
     .fromTo('.hero-cue', { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.15, immediateRender: false }, 0.6)

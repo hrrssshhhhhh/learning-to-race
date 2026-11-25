@@ -17,7 +17,7 @@ export function fitCanvas(canvas: HTMLCanvasElement): { c: CanvasRenderingContex
 /** Best fitness per generation as grouped bars (one bar per series per generation). A line would be too noisy. */
 export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   const { c, w, h } = fitCanvas(canvas);
-  c.font = '11px ui-monospace, Consolas, monospace'; c.fillStyle = '#77777f'; c.textAlign = 'left'; // context state persists between draws
+  c.font = '600 12px "Barlow Condensed", sans-serif'; c.fillStyle = '#7d7d88'; c.textAlign = 'left'; // context state persists between draws
   const n = Math.max(0, ...series.map((s) => s.points.length));
   if (!n) { c.fillText('Bars appear after the first generation ends', 4, h / 2); return; }
   const start = Math.max(0, n - MAX_GENS), gens = n - start;
@@ -27,12 +27,12 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   c.textAlign = 'left';
   let lx = w - 2;
   for (const s of [...series].reverse()) {
-    lx -= c.measureText(s.label).width;
-    c.fillStyle = '#a8a8b0'; c.fillText(s.label, lx, 12);
+    lx -= c.measureText(s.label.toUpperCase()).width;
+    c.fillStyle = '#b8b8c2'; c.fillText(s.label.toUpperCase(), lx, 12);
     lx -= 14; c.fillStyle = s.color; c.fillRect(lx, 4, 8, 8);
     lx -= 12;
   }
-  c.fillStyle = '#77777f';
+  c.fillStyle = '#7d7d88';
   // faint horizontal guides at quarters
   c.strokeStyle = 'rgba(255,255,255,.06)'; c.beginPath();
   for (let g = 1; g < 4; g++) { const gy = T + (ph * g) / 4 + 0.5; c.moveTo(L, gy); c.lineTo(w - 2, gy); }

@@ -1,3 +1,8 @@
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700-italic.css';
+import '@fontsource/barlow-condensed/800-italic.css';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/600.css';
 import { World } from './sim/world';
 import { buildTrack } from './sim/track';
 import { DEFAULT_TRACK } from './sim/defaultTrack';
@@ -10,6 +15,7 @@ import { Editor } from './editor/editor';
 import { mountControls, type AppState } from './ui/controls';
 import { Hud } from './ui/hud';
 import { mountLanding } from './ui/landing';
+import { StartLights } from './ui/lights';
 import type { Vec2 } from './sim/vec';
 import { LAYERS, createBrain, type Brain } from './ml/nn';
 import { POP_SIZE } from './sim/world';
@@ -62,11 +68,11 @@ if (import.meta.env.DEV) Object.assign(window, { slv: { app, scene3d, rig } }); 
 
 const hud = new Hud(root.querySelector<HTMLElement>('#panel')!);
 const controls = mountControls(root.querySelector<HTMLElement>('#controls')!, hud.trainingSlot, app, {
-  reset: () => { void restart(); setRunning(true); },
+  reset: () => { void restart(); newRace(); },
   setKinds: (k) => { kinds = k; void restart(); },
   draw: () => { testKind = null; editor.open(); },
   test: (k) => { testKind = k; editor.open(); },
-  play: () => setRunning(!running),
+  play: () => (running ? setRunning(false) : go()),
   keep: () => {
     const ok = app.world.populations.every((p) => saveMyVehicles(p.kind, p.brains));
     hud.notify(ok ? 'Vehicles saved in this browser' : 'Could not save: browser storage is blocked');
@@ -76,21 +82,29 @@ if (!scene3d) root.querySelector<HTMLFieldSetElement>('#view')!.disabled = true;
 let swoopNext = false;
 
 // Nothing trains until the user starts it: from the hero, the grid card, the Start button, Space, or by racing a new track.
-let running = false, started = false;
+let running = false, started = false, needsLights = true; // a new race starts on the lights; resuming from pause does not
 const startCard = document.createElement('div');
 startCard.className = 'start-card'; startCard.hidden = true;
-startCard.innerHTML = `<h2>On the grid</h2><p>200 random brains are lined up. Start, and watch the first generation crash, learn and try again</p>
-  <button type="button" class="btn primary hero-btn">Start training</button><small>or press Space</small>`;
+startCard.innerHTML = `<p>200 cars and bikes on the grid, random brains</p><button type="button" class="btn primary">Start the race</button>`;
 root.append(startCard);
-startCard.querySelector('button')!.addEventListener('click', () => setRunning(true));
+startCard.querySelector('button')!.addEventListener('click', () => go());
+const lights = new StartLights((n) => scene3d?.setStartLights(n));
 function setRunning(on: boolean): void {
   running = on; started ||= on;
   controls.setRunning(on);
 }
+/** Start or resume. A fresh race first runs the start-light sequence, then goes on lights out. */
+function go(): void {
+  if (lights.running) return;
+  if (!needsLights) { setRunning(true); return; }
+  setRunning(false); started = true; // hides the grid card while the lights run
+  lights.run(() => { needsLights = false; setRunning(true); });
+}
+function newRace(): void { needsLights = true; go(); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement;
   if (e.code !== 'Space' || editor.isOpen || landing.progress() < 1 || t.closest('select, button, textarea, input[type=text]')) return;
-  e.preventDefault(); setRunning(!running);
+  e.preventDefault(); if (running) setRunning(false); else go();
 });
 
 /** Frozen side-by-side test on the current track: pre-trained, fresh (random brains, the baseline) and yours if saved. */
@@ -115,7 +129,7 @@ async function startTest(kind: VehicleKind): Promise<void> {
 const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (control) => {
   track = buildTrack(control); key = trackKey(control);
   if (testKind) { void startTest(testKind); testKind = null; } else void restart();
-  setRunning(true); // pressing Race is the user's go
+  newRace(); // pressing Race is the user's go
   view.setTrack(track);
   scene3d?.setTrack(track);
   rig?.setTrack(track);
@@ -123,7 +137,7 @@ const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (co
 });
 
 const landing = mountLanding({
-  start: () => setRunning(true),
+  start: () => go(),
   draw: () => { testKind = null; editor.open(); },
 });
 

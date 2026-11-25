@@ -189,16 +189,15 @@ export class Editor {
     const valid = !this.drawing && validateTrack(control).ok;
     if (valid) { // live preview: the road and smoothed walls the cars will see
       const t = buildTrack(control), outer = t.outer.map((p) => this.toPx(p)), inner = t.inner.map((p) => this.toPx(p));
-      c.fillStyle = '#14151d'; c.beginPath(); // both walls in one path: even-odd leaves the infield empty
+      c.fillStyle = '#3a3a46'; c.beginPath(); // both walls in one path: even-odd leaves the infield empty
       for (const wall of [outer, inner]) { wall.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y))); c.closePath(); }
       c.fill('evenodd');
       c.lineWidth = 1.5;
-      for (const [wall, col] of [[outer, '#38e1ff'], [inner, '#ff4fd8']] as const) {
-        c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 10; this.path(wall, true); c.stroke(); c.shadowBlur = 0;
-      }
+      c.strokeStyle = '#ffffff';
+      for (const wall of [outer, inner]) { this.path(wall, true); c.stroke(); }
     }
     // the raw stroke: bright while drawing, faint once the preview shows what it became
-    c.strokeStyle = valid ? 'rgba(255,214,10,.3)' : '#ffd60a'; c.lineWidth = 2;
+    c.strokeStyle = valid ? 'rgba(225,6,0,.45)' : '#e10600'; c.lineWidth = 2;
     this.path(this.stroke, false); c.stroke();
   }
 }

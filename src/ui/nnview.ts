@@ -23,7 +23,7 @@ export function activations(b: Brain, input: number[]): number[][] {
 }
 
 // positive = green, negative = red; brightness = magnitude (so it does not rely on hue alone)
-const tint = (v: number, a: number) => (v >= 0 ? `rgba(56,225,255,${a})` : `rgba(255,79,216,${a})`); // cyan +, magenta -
+const tint = (v: number, a: number) => (v >= 0 ? `rgba(0,210,106,${a})` : `rgba(225,6,0,${a})`); // green +, red -, like a telemetry delta
 
 /** Live diagram: nodes filled by activation, edges coloured by weight sign, thickness/opacity by magnitude. */
 export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[]): void {
@@ -42,18 +42,18 @@ export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[])
     }
     k += nIn * nOut + nOut;
   }
-  c.font = '11px ui-monospace, Consolas, monospace'; c.textBaseline = 'middle';
+  c.font = '600 12px "Barlow Condensed", sans-serif'; c.textBaseline = 'middle';
   L.forEach((n, l) => {
     for (let i = 0; i < n; i++) {
       const a = acts[l][i];
       c.beginPath(); c.arc(x(l), y(l, i), 5, 0, Math.PI * 2);
-      c.fillStyle = '#07080d'; c.fill();
+      c.fillStyle = '#0b0b0f'; c.fill();
       const on = Math.min(1, Math.abs(a));
       c.fillStyle = tint(a, 0.15 + 0.85 * on); c.fill(); // brightness = activation
       c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1; c.stroke();
     }
   });
-  c.fillStyle = '#a8a8b0';
+  c.fillStyle = '#b8b8c2';
   c.textAlign = 'right'; IN_LABELS.forEach((t, i) => c.fillText(t, x(0) - 9, y(0, i)));
   c.textAlign = 'left'; OUT_LABELS.forEach((t, i) => c.fillText(`${t} ${acts[L.length - 1][i].toFixed(2)}`, x(L.length - 1) + 9, y(L.length - 1, i)));
 }

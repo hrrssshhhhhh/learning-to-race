@@ -14,7 +14,7 @@ const secs = (ticks: number | null) => (ticks === null ? '–' : `${(ticks * DT)
 const cps = (cp: number, n: number) => (cp < n ? `${cp}/${n}` : `lap ${Math.floor(cp / n) + 1}: ${cp % n}/${n}`);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-interface Card { done: HTMLElement; xfer: HTMLElement; gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLElement; dmgBar: HTMLElement }
+interface Card { pos: HTMLElement; done: HTMLElement; xfer: HTMLElement; gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLElement; dmgBar: HTMLElement }
 
 /** Side panel: spec strip, one card per population, best-per-generation chart, the followed leader's live net. */
 export class Hud {
@@ -92,7 +92,7 @@ export class Hud {
     this.pops.innerHTML = w.populations.map((p, i) => `
       <label class="card" style="--c:${popColor(p)}">
         <span class="head"><input type="radio" name="follow" value="${i}" ${i === this.focus ? 'checked' : ''}>
-          <span class="dot"></span><b>${name(p.label)}</b><span class="follow"></span></span>
+          <span class="pos" data-k="pos"></span><span class="dot"></span><b>${name(p.label)}</b><span class="follow"></span></span>
         <span class="figs">
           <span><small>${p.frozen ? 'Completed a lap' : 'Generation'}</small><b class="fig" data-k="${p.frozen ? 'done' : 'gen'}"></b></span>
           <span><small>Still driving</small><b class="fig" data-k="alive"></b></span>
@@ -107,13 +107,17 @@ export class Hud {
     this.cards = [...this.pops.querySelectorAll('.card')].map((el) => {
       const q = <T extends HTMLElement>(k: string) => el.querySelector<T>(`[data-k="${k}"]`)!;
       const dmg = q('dmg');
-      return { done: q('done'), xfer: q('xfer'), gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg, dmgBar: dmg.querySelector('i')! };
+      return { pos: q('pos'), done: q('done'), xfer: q('xfer'), gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg, dmgBar: dmg.querySelector('i')! };
     });
   }
 
   update(w: World): void {
     if (w !== this.world) this.rebuild(w);
     const n = w.track.checkpoints.length;
+    // tower order: who is furthest round the lap right now (best ever breaks ties)
+    const order = w.populations.map((p, i) => ({ i, cp: p.vehicles[w.leader(p)].checkpointsPassed, best: this.bestCp[i] ?? 0 }))
+      .sort((a, b) => b.cp - a.cp || b.best - a.best);
+    order.forEach((o, rank) => { if (this.cards[o.i]) this.cards[o.i].pos.textContent = `P${rank + 1}`; });
     w.populations.forEach((p, i) => {
       const card = this.cards[i], lead = p.vehicles[w.leader(p)];
       this.bestCp[i] = Math.max(this.bestCp[i], lead.checkpointsPassed);
@@ -126,6 +130,7 @@ export class Hud {
       card.cp.textContent = cps(lead.checkpointsPassed, n);
       card.best.textContent = cps(this.bestCp[i], n);
       card.lap.textContent = secs(lap);
+      card.lap.classList.toggle('fastest', lap !== null);
       const d = Math.min(1, lead.damage);
       card.dmgBar.style.transform = `scaleX(${d})`; // transform, not width: no layout every frame
       card.dmg.dataset.level = d >= 0.7 ? 'bad' : d >= 0.4 ? 'warn' : '';

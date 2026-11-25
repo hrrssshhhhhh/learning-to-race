@@ -90,9 +90,9 @@ export class Effects {
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-    // rgba: hot orange scorch on the dark night walls, alpha = how much rubbing happened there
+    // rgba: dark tyre rubber on the white walls, alpha = how much rubbing happened there
     const rgba = new Float32Array(segs * 24);
-    for (let v = 0; v < segs * 6; v++) { rgba[v * 4] = 1; rgba[v * 4 + 1] = 0.35; rgba[v * 4 + 2] = 0.08; }
+    for (let v = 0; v < segs * 6; v++) { rgba[v * 4] = 0.06; rgba[v * 4 + 1] = 0.06; rgba[v * 4 + 2] = 0.07; }
     g.setAttribute('color', new THREE.BufferAttribute(rgba, 4).setUsage(THREE.DynamicDrawUsage));
     this.marks = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
       vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide,

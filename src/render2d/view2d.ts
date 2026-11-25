@@ -2,21 +2,20 @@ import type { Track } from '../sim/track';
 import type { World } from '../sim/world';
 import type { ContactEvent } from '../sim/contact';
 import type { Vec2 } from '../sim/vec';
-import { SPECS, type VehicleKind, type VehicleState } from '../sim/vehicle';
+import type { VehicleKind, VehicleState } from '../sim/vehicle';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
-// Palette shared by 2D, 3D and the panel: cars cyan, bikes magenta, the followed leader timing-tower yellow.
-export const COLORS = { car: '#38e1ff', bike: '#ff4fd8' } as const;
-export const NEON = { car: 0x38e1ff, bike: 0xff4fd8 } as const;
-export const LEAD = '#ffd60a';
+// Team colours shared by 2D, 3D and the panel (papaya cars, blue bikes); broadcast red marks the followed leader.
+export const COLORS = { car: '#ff8000', bike: '#4d8df7' } as const;
+export const LEAD = '#e10600';
 // Test mode contenders share one kind, so they are coloured by label instead
-const LABEL_COLORS: Record<string, string> = { specialist: '#ffb020', fresh: '#8a90a6', mine: '#9d7bff' };
+const LABEL_COLORS: Record<string, string> = { specialist: '#00d2be', fresh: '#9b9ba5', mine: '#ffd400' };
 export const popColor = (p: { kind: VehicleKind; label: string }) => LABEL_COLORS[p.label] ?? COLORS[p.kind];
 
-const FLASH_FRAMES = 14, TRAIL = 18; // trail = last 18 rendered positions per vehicle
-const BG = '#07080d', VERGE = '#0d0f1a', ROAD = '#14151d';
-const KERB_RED = '#ff2d55', KERB_WHITE = '#dfe7ff', KERB_W = 1.3, KERB_RADIUS = 40, VERGE_W = 7; // m, same kerb rule as the 3D track
-const MIN_LEN_PX = 10; // vehicles never draw shorter than this, so they read as cars and bikes when zoomed out
+const FLASH_FRAMES = 14, TRAIL = 10; // a short comet tail per dot, like a broadcast track map
+const BG = '#15151e', VERGE = '#1b1b25', ROAD = '#3a3a46', SECTORS = ['#e10600', '#4d8df7', '#ffd400'];
+const KERB_RED = '#e10600', KERB_WHITE = '#ffffff', KERB_W = 1.3, KERB_RADIUS = 40, VERGE_W = 7; // m, same kerb rule as the 3D track
+const DOT_PX = 4.5; // vehicles are position dots, as on a broadcast map
 
 /** Circumradius over a ~12 m chord at centre sample i (same rule the 3D kerbs use). */
 function radius(c: Vec2[], i: number): number {
@@ -73,10 +72,6 @@ export class View2D {
     L.width = this.canvas.width; L.height = this.canvas.height;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.fillStyle = BG; c.fillRect(0, 0, this.w, this.h);
-    c.strokeStyle = 'rgba(255,255,255,0.045)'; c.lineWidth = 1; c.beginPath(); // ground: a faint grid
-    for (let x = 0.5; x < this.w; x += 32) { c.moveTo(x, 0); c.lineTo(x, this.h); }
-    for (let y = 0.5; y < this.h; y += 32) { c.moveTo(0, y); c.lineTo(this.w, y); }
-    c.stroke();
 
     c.translate(this.ox, this.oy); c.scale(this.k, this.k);
     const px = 1 / this.k;
@@ -98,14 +93,24 @@ export class View2D {
         c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.lineTo(bi.x, bi.y); c.lineTo(ai.x, ai.y); c.closePath(); c.fill();
       }
     }
-    // centre line, dashed and faint: shows the shape of the lap without competing with the cars
-    c.strokeStyle = 'rgba(56,225,255,0.16)'; c.lineWidth = 1 * px; c.setLineDash([6 * px, 10 * px]);
-    c.beginPath(); this.path(c, cen); c.stroke(); c.setLineDash([]);
-    // neon walls: cyan outside, magenta inside, each drawn twice (soft glow, then a crisp core)
-    for (const [wall, col] of [[t.outer, COLORS.car], [t.inner, COLORS.bike]] as const) {
-      c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 6; c.globalAlpha = 0.35; c.lineWidth = 3 * px;
-      c.beginPath(); this.path(c, wall); c.stroke();
-      c.shadowBlur = 0; c.globalAlpha = 1; c.lineWidth = 1.25 * px; c.stroke();
+    // three sectors, as on a timing map: a thin coloured line down the middle of each third of the lap
+    c.lineWidth = 2 * px; c.globalAlpha = 0.55;
+    for (let k = 0; k < 3; k++) {
+      const i0 = Math.floor((k * n) / 3), i1 = Math.floor(((k + 1) * n) / 3);
+      c.strokeStyle = SECTORS[k]; c.beginPath();
+      for (let i = i0; i <= i1; i++) { const p = cen[i % n]; if (i === i0) c.moveTo(p.x, p.y); else c.lineTo(p.x, p.y); }
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+    // white track limits
+    c.strokeStyle = '#ffffff'; c.lineWidth = 1.5 * px;
+    for (const wall of [t.outer, t.inner]) { c.beginPath(); this.path(c, wall); c.stroke(); }
+    // sector labels at each boundary, outside the track
+    c.font = `italic 700 ${13 * px}px "Barlow Condensed", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let k = 0; k < 3; k++) {
+      const i = Math.floor((k * n) / 3), o = t.outer[i], m = cen[i], d = Math.hypot(o.x - m.x, o.y - m.y) || 1, off = 16 * px;
+      c.fillStyle = SECTORS[k];
+      c.fillText(`S${k + 1}`, o.x + ((o.x - m.x) / d) * off, o.y + ((o.y - m.y) / d) * off);
     }
     this.startLine(c, t, px);
   }
@@ -116,7 +121,7 @@ export class View2D {
     const n = Math.max(4, Math.round(len / 2)), ux = ax / n, uy = ay / n; // ~2 m squares
     const fx = (-ay / len) * (len / n), fy = (ax / len) * (len / n); // one square deep, along the road
     for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
-      c.fillStyle = (i + row) % 2 ? '#07080d' : '#dfe7ff';
+      c.fillStyle = (i + row) % 2 ? '#0b0b0f' : '#ffffff';
       const x = s0.a.x + ux * i + fx * (row - 1), y = s0.a.y + uy * i + fy * (row - 1);
       c.beginPath(); c.moveTo(x, y); c.lineTo(x + ux, y + uy); c.lineTo(x + ux + fx, y + uy + fy); c.lineTo(x + fx, y + fy); c.closePath(); c.fill();
     }
@@ -136,20 +141,6 @@ export class View2D {
     return tr;
   }
 
-  /** A car: body, darker cockpit, four wheels. A bike: slim frame, two wheels, a rider. Drawn heading along +x. */
-  private sprite(c: CanvasRenderingContext2D, kind: VehicleKind, color: string, len: number, wid: number): void {
-    c.fillStyle = '#0d0d0e';
-    if (kind === 'car') {
-      for (const sx of [-0.32, 0.32]) for (const sy of [-1, 1]) c.fillRect(sx * len - len * 0.1, sy * wid * 0.5 - wid * 0.12, len * 0.2, wid * 0.24);
-      c.fillStyle = color; c.beginPath(); c.roundRect(-len / 2, -wid * 0.42, len, wid * 0.84, wid * 0.3); c.fill();
-      c.fillStyle = 'rgba(0,0,0,0.38)'; c.fillRect(-len * 0.18, -wid * 0.26, len * 0.3, wid * 0.52); // cockpit
-    } else {
-      c.fillRect(-len * 0.5, -wid * 0.18, len * 0.26, wid * 0.36); c.fillRect(len * 0.24, -wid * 0.18, len * 0.26, wid * 0.36);
-      c.fillStyle = color; c.beginPath(); c.roundRect(-len * 0.34, -wid * 0.22, len * 0.68, wid * 0.44, wid * 0.2); c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(-len * 0.06, 0, wid * 0.24, 0, Math.PI * 2); c.fill(); // rider's helmet
-    }
-  }
-
   render(w: World, events: ContactEvent[], opts: { showRaysFor?: { pop: number; vehicle: number } }): void {
     const c = this.ctx, t = this.track;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -166,10 +157,10 @@ export class View2D {
     const px = 1 / this.k;
     c.lineJoin = 'round'; c.lineCap = 'round';
 
-    // trails first, under every vehicle: additive streaks, so where many overlap the racing line glows
-    c.lineWidth = 2 * px; c.globalCompositeOperation = 'lighter';
+    // short comet tails under the dots, so you can read direction and speed
+    c.lineWidth = 2 * px;
     for (const p of w.populations) {
-      c.strokeStyle = popColor(p); c.globalAlpha = 0.3; c.beginPath();
+      c.strokeStyle = popColor(p); c.globalAlpha = 0.4; c.beginPath();
       for (const v of p.vehicles) {
         if (!v.alive) continue;
         const tr = this.trailFor(v);
@@ -181,16 +172,16 @@ export class View2D {
       }
       c.stroke();
     }
-    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 1;
 
+    // position dots: team colour with a dark rim so overlapping dots stay countable
+    c.lineWidth = 1.25 * px; c.strokeStyle = '#0b0b0f';
     for (const p of w.populations) {
-      const spec = SPECS[p.kind], s = Math.max(1, (MIN_LEN_PX * px) / spec.length), color = popColor(p);
-      const len = spec.length * s, wid = Math.max(spec.width * s, len * (p.kind === 'car' ? 0.45 : 0.32));
+      c.fillStyle = popColor(p);
+      const r = (p.kind === 'car' ? DOT_PX : DOT_PX - 1) * px;
       for (const q of p.vehicles) {
         if (!q.alive) continue;
-        c.save(); c.translate(q.pos.x, q.pos.y); c.rotate(q.heading);
-        this.sprite(c, p.kind, color, len, wid);
-        c.restore();
+        c.beginPath(); c.arc(q.pos.x, q.pos.y, r, 0, Math.PI * 2); c.fill(); c.stroke();
       }
     }
 
@@ -201,20 +192,25 @@ export class View2D {
         const a = v.heading + (deg * Math.PI) / 180, d = hits[i] * RAY_LENGTH;
         return { x: v.pos.x + Math.cos(a) * d, y: v.pos.y + Math.sin(a) * d, hit: hits[i] < 1 };
       });
-      c.strokeStyle = 'rgba(255,214,10,0.6)'; c.lineWidth = 1 * px; c.beginPath();
+      c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1 * px; c.beginPath();
       for (const e of ends) { c.moveTo(v.pos.x, v.pos.y); c.lineTo(e.x, e.y); }
       c.stroke();
       c.fillStyle = LEAD;
       for (const e of ends) if (e.hit) { c.beginPath(); c.arc(e.x, e.y, 2.5 * px, 0, Math.PI * 2); c.fill(); }
-      c.strokeStyle = LEAD; c.lineWidth = 1.5 * px;
-      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(5, 12 * px), 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = LEAD; c.lineWidth = 2 * px;
+      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(6, 11 * px), 0, Math.PI * 2); c.stroke();
+      // broadcast-style tag on the followed car: red tab with LEAD
+      const tx = v.pos.x + 14 * px, ty = v.pos.y - 18 * px;
+      c.fillStyle = LEAD; c.fillRect(tx, ty - 8 * px, 40 * px, 16 * px);
+      c.fillStyle = '#fff'; c.font = `italic 700 ${12 * px}px "Barlow Condensed", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('LEADER', tx + 20 * px, ty);
     }
 
     // contact: small fading dots, amber for scrapes and red for crashes (same language as the 3D sparks)
     this.flashes = this.flashes.filter((f) => ++f.age <= FLASH_FRAMES);
     for (const f of this.flashes) {
       const a = 1 - f.age / FLASH_FRAMES;
-      c.fillStyle = f.crash ? `rgba(255,45,85,${a})` : `rgba(255,176,32,${a * 0.85})`;
+      c.fillStyle = f.crash ? `rgba(225,6,0,${a})` : `rgba(255,184,0,${a * 0.85})`;
       c.beginPath(); c.arc(f.pos.x, f.pos.y, (f.crash ? 3.5 : 2.5) * px, 0, Math.PI * 2); c.fill();
     }
     c.restore();
