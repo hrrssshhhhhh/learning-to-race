@@ -49,12 +49,11 @@ export function drawNN(canvas: HTMLCanvasElement, brain: Brain, input: number[])
       c.beginPath(); c.arc(x(l), y(l, i), 5, 0, Math.PI * 2);
       c.fillStyle = '#07080d'; c.fill();
       const on = Math.min(1, Math.abs(a));
-      c.shadowColor = tint(a, 1); c.shadowBlur = 10 * on; // active neurons glow
-      c.fillStyle = tint(a, 0.15 + 0.85 * on); c.fill(); c.shadowBlur = 0;
-      c.strokeStyle = 'rgba(130,150,255,.35)'; c.lineWidth = 1; c.stroke();
+      c.fillStyle = tint(a, 0.15 + 0.85 * on); c.fill(); // brightness = activation
+      c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1; c.stroke();
     }
   });
-  c.fillStyle = '#9aa3c7';
+  c.fillStyle = '#a8a8b0';
   c.textAlign = 'right'; IN_LABELS.forEach((t, i) => c.fillText(t, x(0) - 9, y(0, i)));
   c.textAlign = 'left'; OUT_LABELS.forEach((t, i) => c.fillText(`${t} ${acts[L.length - 1][i].toFixed(2)}`, x(L.length - 1) + 9, y(L.length - 1, i)));
 }

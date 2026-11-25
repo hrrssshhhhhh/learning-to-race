@@ -198,7 +198,7 @@ export class Editor {
       }
     }
     // the raw stroke: bright while drawing, faint once the preview shows what it became
-    c.strokeStyle = valid ? 'rgba(198,255,61,.3)' : '#c6ff3d'; c.lineWidth = 2;
+    c.strokeStyle = valid ? 'rgba(255,214,10,.3)' : '#ffd60a'; c.lineWidth = 2;
     this.path(this.stroke, false); c.stroke();
   }
 }

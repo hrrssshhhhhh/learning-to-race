@@ -5,10 +5,10 @@ import type { Vec2 } from '../sim/vec';
 import { SPECS, type VehicleKind, type VehicleState } from '../sim/vehicle';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
-// Neon palette, shared by 2D, 3D and the panel: cars cyan, bikes magenta, the followed leader lime.
+// Palette shared by 2D, 3D and the panel: cars cyan, bikes magenta, the followed leader timing-tower yellow.
 export const COLORS = { car: '#38e1ff', bike: '#ff4fd8' } as const;
 export const NEON = { car: 0x38e1ff, bike: 0xff4fd8 } as const;
-export const LEAD = '#c6ff3d';
+export const LEAD = '#ffd60a';
 // Test mode contenders share one kind, so they are coloured by label instead
 const LABEL_COLORS: Record<string, string> = { specialist: '#ffb020', fresh: '#8a90a6', mine: '#9d7bff' };
 export const popColor = (p: { kind: VehicleKind; label: string }) => LABEL_COLORS[p.label] ?? COLORS[p.kind];
@@ -73,7 +73,7 @@ export class View2D {
     L.width = this.canvas.width; L.height = this.canvas.height;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.fillStyle = BG; c.fillRect(0, 0, this.w, this.h);
-    c.strokeStyle = 'rgba(70,80,170,0.16)'; c.lineWidth = 1; c.beginPath(); // ground: a faint indigo grid, like the 3D floor
+    c.strokeStyle = 'rgba(255,255,255,0.045)'; c.lineWidth = 1; c.beginPath(); // ground: a faint grid
     for (let x = 0.5; x < this.w; x += 32) { c.moveTo(x, 0); c.lineTo(x, this.h); }
     for (let y = 0.5; y < this.h; y += 32) { c.moveTo(0, y); c.lineTo(this.w, y); }
     c.stroke();
@@ -103,7 +103,7 @@ export class View2D {
     c.beginPath(); this.path(c, cen); c.stroke(); c.setLineDash([]);
     // neon walls: cyan outside, magenta inside, each drawn twice (soft glow, then a crisp core)
     for (const [wall, col] of [[t.outer, COLORS.car], [t.inner, COLORS.bike]] as const) {
-      c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 12; c.globalAlpha = 0.55; c.lineWidth = 3 * px;
+      c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 6; c.globalAlpha = 0.35; c.lineWidth = 3 * px;
       c.beginPath(); this.path(c, wall); c.stroke();
       c.shadowBlur = 0; c.globalAlpha = 1; c.lineWidth = 1.25 * px; c.stroke();
     }
@@ -201,13 +201,13 @@ export class View2D {
         const a = v.heading + (deg * Math.PI) / 180, d = hits[i] * RAY_LENGTH;
         return { x: v.pos.x + Math.cos(a) * d, y: v.pos.y + Math.sin(a) * d, hit: hits[i] < 1 };
       });
-      c.strokeStyle = 'rgba(198,255,61,0.6)'; c.lineWidth = 1 * px; c.beginPath();
+      c.strokeStyle = 'rgba(255,214,10,0.6)'; c.lineWidth = 1 * px; c.beginPath();
       for (const e of ends) { c.moveTo(v.pos.x, v.pos.y); c.lineTo(e.x, e.y); }
       c.stroke();
       c.fillStyle = LEAD;
       for (const e of ends) if (e.hit) { c.beginPath(); c.arc(e.x, e.y, 2.5 * px, 0, Math.PI * 2); c.fill(); }
-      c.strokeStyle = LEAD; c.lineWidth = 1.5 * px; c.shadowColor = LEAD; c.shadowBlur = 10;
-      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(5, 12 * px), 0, Math.PI * 2); c.stroke(); c.shadowBlur = 0;
+      c.strokeStyle = LEAD; c.lineWidth = 1.5 * px;
+      c.beginPath(); c.arc(v.pos.x, v.pos.y, Math.max(5, 12 * px), 0, Math.PI * 2); c.stroke();
     }
 
     // contact: small fading dots, amber for scrapes and red for crashes (same language as the 3D sparks)
