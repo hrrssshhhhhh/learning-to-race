@@ -6,9 +6,9 @@ import type { Vec2 } from '../sim/vec';
 import { SPECS, type VehicleKind } from '../sim/vehicle';
 import { Effects } from './effects';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
+import { popColor } from '../render2d/view2d';
 
 // World (x, y) metres -> three (X, Z), Y up. Seen from above with screen-up = -Z this matches the 2D view.
-const COLORS: Record<VehicleKind, number> = { car: 0x4aa3ff, bike: 0xffb347 }; // same as the 2D view
 const SKY = 0xb9cfe2, GROUND = 0x5f7356, ASPHALT = 0x2b2e35, WALL = 0xe4e6ea, KERB_RED = 0xd8312f, KERB_WHITE = 0xf2f2f2;
 const WALL_H = 0.9, WALL_T = 0.6, KERB_W = 1.3, KERB_RADIUS = 40; // m; kerbs where the centreline radius is below KERB_RADIUS
 const UP = new THREE.Vector3(0, 1, 0);
@@ -116,15 +116,16 @@ export class Scene3D {
   private trackMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide });
   private geo: Record<VehicleKind, THREE.BufferGeometry> = { car: vehicleGeometry('car'), bike: vehicleGeometry('bike') };
   private mat: Record<VehicleKind, THREE.MeshStandardMaterial> = {
-    car: new THREE.MeshStandardMaterial({ color: COLORS.car, vertexColors: true, roughness: 0.5, metalness: 0.1 }),
-    bike: new THREE.MeshStandardMaterial({ color: COLORS.bike, vertexColors: true, roughness: 0.5, metalness: 0.1 }),
+    // white: each instance is tinted with its population's colour (setColorAt), same palette as the 2D view
+    car: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }),
+    bike: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }),
   };
   private fleets: Partial<Record<VehicleKind, THREE.InstancedMesh>> = {};
   private observer: ResizeObserver;
   readonly effects: Effects;
   // reused every frame: no per-frame allocation
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private q = new THREE.Quaternion();
-  private one = new THREE.Vector3(1, 1, 1); private zero = new THREE.Vector3(0, 0, 0);
+  private tint = new THREE.Color(); private one = new THREE.Vector3(1, 1, 1); private zero = new THREE.Vector3(0, 0, 0);
   private used: Record<VehicleKind, number> = { car: 0, bike: 0 };
   // followed leader: its 7 sensor rays plus a marker cone overhead, so the net diagram has a visible body
   private rays = new THREE.LineSegments(
@@ -194,17 +195,22 @@ export class Scene3D {
       }
       mesh.count = 0;
     }
-    // shortcut: colour is per kind, so two populations of the same kind share it; add setColorAt when contenders arrive
     for (const pop of w.populations) {
       const mesh = this.fleets[pop.kind]!;
+      this.tint.set(popColor(pop));
       for (const v of pop.vehicles) {
+        mesh.setColorAt(mesh.count, this.tint);
         this.p.set(v.pos.x, 0, v.pos.y);
         this.q.setFromAxisAngle(UP, -v.heading); // heading is CCW in xy; rotating about +Y maps +X toward -Z
         this.m.compose(this.p, this.q, v.alive ? this.one : this.zero);
         mesh.setMatrixAt(mesh.count++, this.m);
       }
     }
-    for (const kind of ['car', 'bike'] as const) this.fleets[kind]!.instanceMatrix.needsUpdate = true;
+    for (const kind of ['car', 'bike'] as const) {
+      const f = this.fleets[kind]!;
+      f.instanceMatrix.needsUpdate = true;
+      if (f.instanceColor) f.instanceColor.needsUpdate = true;
+    }
     const v = focus ? w.populations[focus.pop]?.vehicles[focus.vehicle] : undefined;
     this.rays.visible = this.marker.visible = !!v?.alive;
     if (v?.alive) {

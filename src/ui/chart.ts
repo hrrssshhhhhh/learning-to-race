@@ -17,7 +17,7 @@ export function fitCanvas(canvas: HTMLCanvasElement): { c: CanvasRenderingContex
 /** Best fitness per generation as grouped bars (one bar per series per generation). A line would be too noisy. */
 export function drawChart(canvas: HTMLCanvasElement, series: Series[]): void {
   const { c, w, h } = fitCanvas(canvas);
-  c.font = '11px system-ui, sans-serif'; c.fillStyle = '#9aa0ad';
+  c.font = '11px system-ui, sans-serif'; c.fillStyle = '#9aa0ad'; c.textAlign = 'left'; // context state persists between draws
   const n = Math.max(0, ...series.map((s) => s.points.length));
   if (!n) { c.fillText('Bars appear after the first generation ends', 4, h / 2); return; }
   const start = Math.max(0, n - MAX_GENS), gens = n - start;

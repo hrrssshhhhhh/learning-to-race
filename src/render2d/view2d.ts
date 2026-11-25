@@ -2,10 +2,13 @@ import type { Track } from '../sim/track';
 import type { World } from '../sim/world';
 import type { ContactEvent } from '../sim/contact';
 import type { Vec2 } from '../sim/vec';
-import { SPECS } from '../sim/vehicle';
+import { SPECS, type VehicleKind } from '../sim/vehicle';
 import { castRays, RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 
 export const COLORS = { car: '#4aa3ff', bike: '#ffb347' } as const;
+// Test mode contenders share one kind, so they are coloured by label instead
+const LABEL_COLORS: Record<string, string> = { specialist: '#ff8a3d', fresh: '#a0a6b3', mine: '#ff5ccf' };
+export const popColor = (p: { kind: VehicleKind; label: string }) => LABEL_COLORS[p.label] ?? COLORS[p.kind];
 const FLASH_FRAMES = 12;
 
 export class View2D {
@@ -84,7 +87,7 @@ export class View2D {
     // alive vehicles only; min size so tiny bikes stay visible when zoomed out
     for (const p of w.populations) {
       const spec = SPECS[p.kind], len = Math.max(spec.length, 3 * px), wid = Math.max(spec.width, 1.5 * px);
-      c.fillStyle = COLORS[p.kind];
+      c.fillStyle = popColor(p);
       for (const q of p.vehicles) {
         if (!q.alive) continue;
         c.save(); c.translate(q.pos.x, q.pos.y); c.rotate(q.heading);

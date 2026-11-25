@@ -3,18 +3,18 @@ import { DT, type World } from '../sim/world';
 import { SPECS, type VehicleKind } from '../sim/vehicle';
 import { RAY_ANGLES, sensorInputs } from '../sim/sensors';
 import { LAYERS } from '../ml/nn';
-import { COLORS } from '../render2d/view2d';
+import { popColor } from '../render2d/view2d';
 import { drawChart } from './chart';
 import { drawNN } from './nnview';
 
-const NAMES: Record<string, string> = { car: 'Car', bike: 'Bike' };
+const NAMES: Record<string, string> = { car: 'Cars', bike: 'Bikes', specialist: 'Pre-trained', fresh: 'Fresh', mine: 'Yours' };
 const name = (label: string) => NAMES[label] ?? label;
 const secs = (ticks: number | null) => (ticks === null ? '–' : `${(ticks * DT).toFixed(1)} s`);
 // after a full lap, show progress on the current lap instead of e.g. 219/200
 const cps = (cp: number, n: number) => (cp < n ? `${cp}/${n}` : `lap ${Math.floor(cp / n) + 1}: ${cp % n}/${n}`);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-interface Card { xfer: HTMLElement; gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLMeterElement }
+interface Card { done: HTMLElement; xfer: HTMLElement; gen: HTMLElement; alive: HTMLElement; cp: HTMLElement; best: HTMLElement; lap: HTMLElement; dmg: HTMLMeterElement }
 
 /** Side panel: spec strip, one card per population, best-per-generation chart, the followed leader's live net. */
 export class Hud {
@@ -22,6 +22,9 @@ export class Hud {
   focus = 0;
   /** Set when the run started from the user's saved vehicles: first-lap generation of a fresh run on this track, if known. */
   transfer: Partial<Record<VehicleKind, number>> | null = null;
+  /** Called by the results card's Keep training button (test mode). */
+  onKeepTraining: () => void = () => {};
+  private results: HTMLElement; private resultsShown = false; private setOpen: (open: boolean) => void;
   private world: World | null = null;
   private cards: Card[] = [];
   private bestCp: number[] = [];
@@ -37,6 +40,7 @@ export class Hud {
       <button type="button" class="panel-toggle" aria-controls="panel-body">Stats</button>
       <div class="panel-body" id="panel-body">
         <p class="spec"></p>
+        <div class="results" role="status" hidden><p></p><button type="button">Keep training</button></div>
         <div class="pops" role="radiogroup" aria-label="Follow population"></div>
         <h2>Best fitness per generation</h2>
         <canvas class="chart" role="img" aria-label="Bar chart of best fitness per generation"></canvas>
@@ -45,6 +49,8 @@ export class Hud {
       </div>`;
     this.spec = root.querySelector('.spec')!;
     this.pops = root.querySelector('.pops')!;
+    this.results = root.querySelector('.results')!;
+    this.results.querySelector('button')!.addEventListener('click', () => this.onKeepTraining());
     this.chart = root.querySelector('.chart')!;
     this.nn = root.querySelector('.nn')!;
     this.nnTitle = root.querySelector('.nn-title')!;
@@ -54,7 +60,7 @@ export class Hud {
     gsap.set(this.banner, { xPercent: -50, autoAlpha: 0 });
 
     const toggle = root.querySelector<HTMLButtonElement>('.panel-toggle')!;
-    const setOpen = (open: boolean) => {
+    const setOpen = this.setOpen = (open: boolean) => {
       document.body.classList.toggle('panel-open', open);
       toggle.setAttribute('aria-expanded', String(open));
       toggle.textContent = open ? 'Hide stats' : 'Show stats';
@@ -70,13 +76,15 @@ export class Hud {
     this.focus = Math.min(this.focus, w.populations.length - 1);
     this.bestCp = w.populations.map(() => 0);
     this.celebrated.clear();
+    this.results.hidden = true; this.resultsShown = false;
     this.chartLen = -1;
     const total = w.populations.reduce((n, p) => n + p.vehicles.length, 0);
     this.spec.textContent = `${total} vehicles · ${RAY_ANGLES.length} distance sensors · neural net ${LAYERS.join('→')} · genetic algorithm`;
     this.pops.innerHTML = w.populations.map((p, i) => `
-      <label class="card" style="--c:${COLORS[p.kind]}">
+      <label class="card" style="--c:${popColor(p)}">
         <span class="head"><input type="radio" name="follow" value="${i}" ${i === this.focus ? 'checked' : ''}>
-          <b>${name(p.label)}s</b> <small>follow</small></span>
+          <b>${name(p.label)}</b> <small>follow</small></span>
+        <span class="row done" ${p.frozen ? '' : 'hidden'}>Completed a lap <b data-k="done"></b></span>
         <span class="row">Generation <b data-k="gen"></b></span>
         <span class="row">Alive <b data-k="alive"></b></span>
         <span class="row">Leader checkpoints <b data-k="cp"></b></span>
@@ -87,7 +95,7 @@ export class Hud {
       </label>`).join('');
     this.cards = [...this.pops.querySelectorAll('.card')].map((el) => {
       const q = <T extends HTMLElement>(k: string) => el.querySelector<T>(`[data-k="${k}"]`)!;
-      return { xfer: q('xfer'), gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg: q<HTMLMeterElement>('dmg') };
+      return { done: q('done'), xfer: q('xfer'), gen: q('gen'), alive: q('alive'), cp: q('cp'), best: q('best'), lap: q('lap'), dmg: q<HTMLMeterElement>('dmg') };
     });
   }
 
@@ -106,22 +114,30 @@ export class Hud {
       card.best.textContent = cps(this.bestCp[i], n);
       card.lap.textContent = secs(lap);
       card.dmg.value = lead.damage;
+      if (p.frozen) card.done.textContent = `${Math.round(100 * w.completionRate(p))}%`;
       card.xfer.hidden = !this.transfer;
       if (this.transfer) {
         const x = p.firstLapGeneration, y = this.transfer[p.kind];
         card.xfer.textContent = x === null ? 'Carried over: no lap yet'
           : `First lap in generation ${x + 1}` + (y === undefined ? '' : ` vs ${y + 1} from scratch`);
       }
-      if (p.firstLapGeneration !== null && !this.celebrated.has(i)) {
+      if (!p.frozen && p.firstLapGeneration !== null && !this.celebrated.has(i)) { // frozen = test, nothing learned
         this.celebrated.add(i);
-        this.celebrate(`${name(p.label)}s learned the track in generation ${p.firstLapGeneration + 1}!`);
+        this.celebrate(`${name(p.label)} learned the track in generation ${p.firstLapGeneration + 1}!`);
       }
     });
+    if (!this.resultsShown && w.populations[0]?.frozen && w.populations.every((p) => w.isAttemptOver(p))) {
+      this.resultsShown = true; // once per test: the attempt is over and rates no longer change
+      this.results.querySelector('p')!.textContent = 'Lap completion: ' + w.populations
+        .map((p) => `${name(p.label)} ${Math.round(100 * w.completionRate(p))}%`).join(' · ');
+      this.results.hidden = false;
+      this.setOpen(true); // results live in the panel: make sure they are seen
+    }
     if (!document.body.classList.contains('panel-open')) return; // hidden canvases: skip drawing
     const len = w.populations.reduce((s, p) => s + p.history.length, 0);
     if (len !== this.chartLen) { // only redraw when a generation ends
       this.chartLen = len;
-      drawChart(this.chart, w.populations.map((p) => ({ label: p.label, color: COLORS[p.kind], points: p.history.map((g) => g.bestFitness) })));
+      drawChart(this.chart, w.populations.map((p) => ({ label: p.label, color: popColor(p), points: p.history.map((g) => g.bestFitness) })));
     }
     const p = w.populations[this.focus], v = p.vehicles[w.leader(p)];
     this.nnTitle.textContent = `${name(p.label)} leader's brain, live`;

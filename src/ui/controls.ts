@@ -6,7 +6,7 @@ import type { StartPoint } from '../storage/brains';
 export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint }
 
 export function mountControls(
-  root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void },
+  root: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void },
 ): { sync(): void } {
   const radios = (name: string, legend: string, opts: [string, string][]) =>
     `<fieldset id="${name}"><legend class="show">${legend}</legend>${opts.map(([v, l]) =>
@@ -23,6 +23,9 @@ export function mountControls(
     <button type="button" id="reset">Reset training</button>
     <button type="button" id="keep">Keep my vehicles</button>
     <button type="button" id="draw">Draw track</button>
+    <button type="button" id="test">Test on unseen track</button>
+    <label for="test-kind" class="sr-only">Test with</label>
+    <select id="test-kind"><option value="car">with cars</option><option value="bike">with bikes</option></select>
     <fieldset><legend>Vehicles</legend>
       <label><input type="checkbox" value="car" checked> Cars</label>
       <label><input type="checkbox" value="bike" checked> Bikes</label>
@@ -34,6 +37,8 @@ export function mountControls(
   root.querySelector('#reset')!.addEventListener('click', () => actions.reset());
   root.querySelector('#draw')!.addEventListener('click', () => actions.draw());
   root.querySelector('#keep')!.addEventListener('click', () => actions.keep());
+  const testKind = root.querySelector<HTMLSelectElement>('#test-kind')!;
+  root.querySelector('#test')!.addEventListener('click', () => actions.test(testKind.value as VehicleKind));
   const start = root.querySelector<HTMLSelectElement>('#start')!;
   start.value = app.start; // applies to the next Restart or Race, not the run in progress
   start.addEventListener('change', () => { app.start = start.value as StartPoint; });

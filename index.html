@@ -21,6 +21,10 @@
   .card .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #c3c7d1; line-height: 1.5; }
   .card .row b { color: #fff; }
   .card .xfer { color: #6ee7a0; font-weight: 600; }
+  .card .done[hidden], .results[hidden] { display: none; }
+  .results { border: 1px solid #6ee7a0; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background: #16261d; }
+  .results p { margin: 0 0 8px; font-weight: 600; color: #fff; }
+  .results button { font: inherit; padding: 4px 10px; }
   .card .xfer[hidden] { display: none; }
   .card meter { width: 110px; }
   #panel canvas { display: block; width: 100%; }
@@ -37,6 +41,7 @@
   #editor[hidden], .editor-panel[hidden] { display: none; }
   .editor-panel { position: fixed; bottom: 8px; left: 12px; z-index: 11; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(15,17,21,.8); padding: 8px 12px; border-radius: 8px; }
   .editor-panel button { font: inherit; padding: 4px 10px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .editor-msg { margin: 0; color: #ff8a80; font-weight: 600; }
 </style></head>
 <body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>
