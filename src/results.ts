@@ -290,7 +290,7 @@ function render(d: Results): void {
       <p class="why">Why transfer can work at all: the sensors are local, so a brain never learns <em>this track</em>. It learns how to react to
         walls at a given distance and speed, and a left-hander on track B looks the same as one on A. Experiments 01 and 03 test that idea;
         the red corners show where it stops holding.</p>
-      <p class="method">The full write-up, with method and limitations, is <code>docs/report.md</code> in the repository.</p>
+      <p class="method">The full write-up, with method and limitations: <a href="https://github.com/hrrssshhhhhh/learning-to-race/blob/main/docs/report.md">project report</a>. Code: <a href="https://github.com/hrrssshhhhhh/learning-to-race">GitHub</a>.</p>
     </section>
   </main>`;
   app.append(tip);

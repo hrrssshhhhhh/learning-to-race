@@ -2,7 +2,7 @@
 
 100 cars and 100 bikes start with random brains and teach themselves to race any track you draw. Each vehicle has a small neural network; a genetic algorithm keeps the best drivers and breeds the next generation. The neural network, the genetic algorithm, the physics and the sensors are all written from scratch in TypeScript, with no ML libraries.
 
-**Live:** _link added at launch_ · **Results:** [`/results.html`](results.html)
+**Live:** _link added at launch_ · **Results:** [`/results.html`](results.html) · **Report:** [`docs/report.md`](docs/report.md)
 
 ![Cars and bikes learning the default circuit](docs/demo.gif)
 <!-- docs/demo.gif is recorded by hand after launch -->
