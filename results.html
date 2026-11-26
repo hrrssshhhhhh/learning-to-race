@@ -1,3 +1,78 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Self-Learning Vehicles</title></head>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Results · Self-Learning Vehicles</title><link rel="icon" href="data:," />
+<meta name="description" content="Three experiments on cars and bikes that teach themselves to race: transfer to unseen tracks, cars vs bikes, and learning one track to drive the next." />
+<style>
+  :root {
+    --carbon: #0b0b0f; --bg: #15151e; --panel: #101016; --row: #1b1b24; --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.16);
+    --text: #ffffff; --text-2: #b8b8c2; --muted: #7d7d88; --red: #e10600; --red-hi: #ff1e1a;
+    --display: "Barlow Condensed", "Arial Narrow", sans-serif; --ui: "Barlow", system-ui, sans-serif;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  html, body { margin: 0; background: var(--panel); color: var(--text); font: 17px/28px var(--ui); }
+  :focus-visible { outline: 2px solid var(--red-hi); outline-offset: 2px; }
+  a { color: inherit; }
+  code { font: 15px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--text); background: var(--row); padding: 2px 6px; }
+  .fig { font-family: var(--display); font-variant-numeric: tabular-nums; }
+
+  .top { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 16px 40px;
+    background: rgba(11,11,15,.94); border-bottom: 2px solid var(--red); }
+  .mark { font: italic 800 18px/24px var(--display); letter-spacing: .04em; text-transform: uppercase; text-decoration: none; }
+  .mark::before { content: ""; display: inline-block; width: 18px; height: 12px; margin-right: 10px; background: var(--red); transform: skewX(-20deg); vertical-align: 1px; }
+  .back { color: var(--text-2); text-decoration: none; font: 600 15px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; transition: color .15s var(--ease); }
+  .back:hover { color: var(--text); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 0 40px 96px; }
+  .intro { padding: 80px 0 32px; }
+  .tag { display: inline-block; margin: 0 0 20px; padding: 6px 14px; background: var(--red); font: italic 700 15px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  h1 { margin: 0 0 24px; font: italic 800 clamp(48px, 7vw, 88px)/.92 var(--display); text-transform: uppercase; }
+  .lede { max-width: 40rem; margin: 0; color: var(--text-2); font-size: 19px; line-height: 30px; }
+
+  .exp { position: relative; padding: 64px 0 0; margin-top: 32px; border-top: 1px solid var(--line); }
+  .num { margin: 0 0 4px; color: var(--red); font: italic 700 18px/1 var(--display); }
+  h2 { margin: 0 0 16px; font: italic 700 clamp(28px, 3.6vw, 40px)/1.05 var(--display); text-transform: uppercase; max-width: 44rem; }
+  h3 { margin: 40px 0 8px; font: italic 700 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+  .exp p, .how p { max-width: 44rem; color: var(--text-2); margin: 0 0 16px; }
+  .figs { display: flex; flex-wrap: wrap; gap: 24px 0; margin: 32px 0; }
+  .figs div { display: flex; flex-direction: column; gap: 8px; padding: 0 32px; border-left: 1px solid var(--line-strong); max-width: 200px; }
+  .figs div:first-child { padding-left: 0; border-left: 0; }
+  .figs b { font: italic 700 48px/1 var(--display); }
+  .figs span { color: var(--muted); font: 600 14px/18px var(--display); letter-spacing: .04em; text-transform: uppercase; }
+
+  .chart { display: block; width: 100%; margin: 8px 0 0; }
+  .c1 { height: 280px; } .c2 { height: 168px; } .c3 { height: 480px; } .c4 { height: 300px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; color: var(--text-2); font: 600 14px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; }
+  .legend i.tick { width: 2px; height: 14px; border-radius: 0; background: #fff; }
+  .legend i.ring { box-sizing: border-box; border: 1.5px solid var(--text-2); }
+
+  .data { margin: 24px 0 0; }
+  .data summary { cursor: pointer; color: var(--muted); font: 600 14px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 8px 0; }
+  .data summary:hover { color: var(--text); }
+  .scroll { max-height: 320px; overflow: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font: 15px/1 var(--display); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+
+  .how { margin-top: 96px; padding: 48px 0 0; border-top: 2px solid var(--red); }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .cols h3 { margin-top: 8px; }
+  .cols p { font-size: 16px; line-height: 26px; }
+  .why { margin-top: 24px !important; padding: 16px 20px; background: var(--row); border-left: 4px solid var(--red); color: var(--text) !important; }
+  .why em { font-style: normal; font-weight: 600; }
+
+  .tip { position: absolute; z-index: 10; transform: translate(-50%, calc(-100% - 12px)); padding: 6px 10px; background: var(--carbon); border: 1px solid var(--line-strong);
+    color: var(--text); font: 600 14px/1.2 var(--display); white-space: nowrap; pointer-events: none; }
+  @media (max-width: 760px) {
+    .top { padding: 12px 20px; }
+    main { padding: 0 20px 64px; }
+    .intro { padding-top: 48px; }
+    .cols { grid-template-columns: 1fr; gap: 8px; }
+    .figs div { padding: 0 20px; }
+    .figs b { font-size: 36px; }
+  }
+</style></head>
 <body><div id="app"></div><script type="module" src="/src/results.ts"></script></body></html>

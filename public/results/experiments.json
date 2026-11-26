@@ -1,0 +1,648 @@
+{
+ "generated": "2026-11-26",
+ "exp1": {
+  "tracks": 50,
+  "pretrained": {
+   "car": [
+    0.63,
+    0.64,
+    0.62,
+    0.62,
+    0.66,
+    0.59,
+    0.62,
+    0.62,
+    0.65,
+    0.63,
+    0.6,
+    0.62,
+    0.64,
+    0.62,
+    0.61,
+    0.58,
+    0.62,
+    0.61,
+    0.63,
+    0.63,
+    0.61,
+    0.58,
+    0.61,
+    0.63,
+    0.63,
+    0.63,
+    0.66,
+    0.58,
+    0.64,
+    0.63,
+    0.62,
+    0.61,
+    0.66,
+    0.61,
+    0.6,
+    0.62,
+    0.61,
+    0.62,
+    0.62,
+    0.64,
+    0.62,
+    0.61,
+    0.63,
+    0.6,
+    0.64,
+    0.67,
+    0.63,
+    0.63,
+    0.63,
+    0.61
+   ],
+   "bike": [
+    0.64,
+    0.64,
+    0.59,
+    0.64,
+    0.68,
+    0.56,
+    0.62,
+    0.65,
+    0.66,
+    0.65,
+    0.58,
+    0.59,
+    0.66,
+    0.6,
+    0.63,
+    0.58,
+    0.58,
+    0.65,
+    0.66,
+    0.6,
+    0.58,
+    0.58,
+    0.57,
+    0.61,
+    0.58,
+    0.61,
+    0.63,
+    0.59,
+    0.66,
+    0.65,
+    0.61,
+    0.58,
+    0.68,
+    0.59,
+    0.59,
+    0.61,
+    0.6,
+    0.61,
+    0.6,
+    0.61,
+    0.63,
+    0.66,
+    0.6,
+    0.6,
+    0.62,
+    0.6,
+    0.67,
+    0.59,
+    0.6,
+    0.61
+   ]
+  },
+  "fresh": {
+   "car": [
+    0,
+    0,
+    0,
+    0,
+    0.01,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "bike": [
+    0.01,
+    0,
+    0,
+    0,
+    0.01,
+    0,
+    0.02,
+    0,
+    0,
+    0,
+    0,
+    0.01,
+    0.01,
+    0,
+    0.01,
+    0,
+    0,
+    0,
+    0.01,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.01,
+    0.02,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.01,
+    0,
+    0.01,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ },
+ "exp2": {
+  "tracks": 20,
+  "cap": 60,
+  "car": [
+   2,
+   2,
+   4,
+   3,
+   3,
+   3,
+   2,
+   5,
+   1,
+   2,
+   1,
+   2,
+   3,
+   3,
+   2,
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "bike": [
+   1,
+   2,
+   2,
+   2,
+   3,
+   2,
+   4,
+   2,
+   1,
+   3,
+   1,
+   4,
+   2,
+   3,
+   2,
+   2,
+   3,
+   1,
+   2,
+   2
+  ]
+ },
+ "exp3": {
+  "pairs": 20,
+  "cap": 60,
+  "extraGensOnA": 20,
+  "cornerRadius": 40,
+  "fresh": [
+   2,
+   2,
+   1,
+   4,
+   2,
+   4,
+   2,
+   5,
+   1,
+   2,
+   4,
+   2,
+   2,
+   3,
+   2,
+   3,
+   2,
+   2,
+   4,
+   4
+  ],
+  "transfer": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "corners": [
+   {
+    "radius": 39.2,
+    "scrapes": 3,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 30.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 32.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 22.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 16.5,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 27.4,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 32.1,
+    "scrapes": 10,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 34.2,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 30.6,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 36.7,
+    "scrapes": 9,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 25,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 14.6,
+    "scrapes": 17,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 22.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 29.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 32,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 15,
+    "scrapes": 48,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 29.9,
+    "scrapes": 4,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 38.1,
+    "scrapes": 6,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 33.7,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 35.1,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 35.5,
+    "scrapes": 18,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 39.1,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 24.9,
+    "scrapes": 20,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 13.5,
+    "scrapes": 30,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 36.6,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 18.7,
+    "scrapes": 0,
+    "crashes": 13,
+    "tighterThanA": true
+   },
+   {
+    "radius": 24.2,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 29,
+    "scrapes": 5,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 16.3,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 25.2,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 31.4,
+    "scrapes": 2,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 26.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 33.9,
+    "scrapes": 3,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 31.3,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 28,
+    "scrapes": 2,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 23.3,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 31.7,
+    "scrapes": 5,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 35.1,
+    "scrapes": 28,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 38.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 23.4,
+    "scrapes": 4,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 30.2,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 21.9,
+    "scrapes": 3,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 39.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 32.5,
+    "scrapes": 3,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 37.5,
+    "scrapes": 5,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 26.7,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 33.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 31.9,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 25,
+    "scrapes": 23,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 31.2,
+    "scrapes": 0,
+    "crashes": 2,
+    "tighterThanA": true
+   },
+   {
+    "radius": 30.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 35.4,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": true
+   },
+   {
+    "radius": 34.7,
+    "scrapes": 3,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 37.7,
+    "scrapes": 1,
+    "crashes": 0,
+    "tighterThanA": false
+   },
+   {
+    "radius": 14.8,
+    "scrapes": 0,
+    "crashes": 0,
+    "tighterThanA": false
+   }
+  ]
+ }
+}

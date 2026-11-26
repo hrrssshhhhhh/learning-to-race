@@ -72,8 +72,8 @@ Detailed documents:
 - [x] **16. Pre-training.** Train the specialist offline and ship it with the site (`npm run pretrain`, ~1.5 min). Start from → "Pre-trained (default track)".
   - *2026-11-25: generalist dropped to keep pre-training short.* Measured: the specialist already completes 63% on unseen random tracks (50–54% on the default track; the rest of each population are mutated children).
 - [x] **17. Test on unseen track.** *(Generalist dropped: contenders are Pre-trained, Fresh (random-brain baseline) and Yours.)* Side by side, frozen, one attempt each, with completion rates; Keep training lets them all evolve.
-- [ ] **18. Experiments + Results page + README.**
-  1. ~~Specialist vs generalist on 50 unseen tracks~~ *(generalist dropped; needs a replacement)*
+- [x] **18. Experiments + Results page + README.**
+  1. ~~Specialist vs generalist on 50 unseen tracks~~ *(generalist dropped; replaced by pre-trained vs random brains on 50 unseen tracks)*
   2. Cars vs bikes: who learns faster
   3. Transfer: does training on track A help on track B, and which corners still cause scrapes
 - [ ] **19. Launch.** All tests pass, a final walkthrough, deploy to Vercel (you set up the GitHub and Vercel accounts; I give you the commands).
