@@ -1,10 +1,9 @@
-import { forward, LAYERS, type Brain } from '../ml/nn';
+import { forward, type Brain } from '../ml/nn';
 import { DEFAULT_GA } from '../ml/ga';
 import { RAY_ANGLES, RAY_LENGTH } from '../sim/sensors';
 import { POP_SIZE } from '../sim/world';
 import { loadShipped } from '../storage/brains';
 import { COLORS } from '../render2d/view2d';
-import { drawNN } from './nnview';
 import { fitCanvas } from './chart';
 
 const STEPS: [string, string][] = [
@@ -30,16 +29,11 @@ export function cornerInputs(t: number): number[] {
   return [...rays, 0.75 - 0.3 * Math.abs(bend)];
 }
 
-/** Telemetry cards around the hero: the real pre-trained brain, its sensors, and the evolution loop. */
+/** Telemetry cards around the hero: a vehicle's sensors (steered by the real pre-trained net) and the evolution loop. */
 export function mountHeroDeck(hero: HTMLElement): void {
   const deck = document.createElement('div');
   deck.className = 'hero-deck';
   deck.innerHTML = `
-    <section class="tele tele-brain" aria-label="The pre-trained car brain, live">
-      <h2><span>The brain</span><small>pre-trained car · live</small></h2>
-      <canvas class="tele-nn" role="img" aria-label="Neural network diagram: 8 sensor inputs, 10 hidden neurons, steer and throttle outputs"></canvas>
-      <p class="tele-foot fig">${LAYERS.join(' → ')} <i></i> ${RAY_ANGLES.length} rays + speed in <i></i> steer, throttle out</p>
-    </section>
     <section class="tele tele-eyes" aria-label="What each vehicle senses">
       <h2><span>What it sees</span><small>${RAY_ANGLES.length} rays · ${RAY_LENGTH} m</small></h2>
       <canvas class="tele-rays" aria-hidden="true"></canvas>
@@ -54,17 +48,16 @@ export function mountHeroDeck(hero: HTMLElement): void {
     </section>`;
   hero.append(deck);
 
-  const nn = deck.querySelector<HTMLCanvasElement>('.tele-nn')!, rays = deck.querySelector<HTMLCanvasElement>('.tele-rays')!;
+  const rays = deck.querySelector<HTMLCanvasElement>('.tele-rays')!;
   const outs = [...deck.querySelectorAll<HTMLElement>('[data-o]')], steps = [...deck.querySelectorAll('li')];
   const gen = deck.querySelector<HTMLElement>('[data-gen]')!;
   let brain: Brain | null = null;
-  void loadShipped('specialist', 'car').then((b) => { brain = b?.[0] ?? null; if (!brain) deck.querySelector('.tele-brain')!.remove(); });
+  void loadShipped('specialist', 'car').then((b) => { brain = b?.[0] ?? null; }); // without it the car just holds straight
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const draw = (ms: number) => {
     const t = reduce ? 2 : ms / 1000, input = cornerInputs(t);
     const out = brain ? forward(brain, input) : [0, 0];
-    if (brain && nn.isConnected) drawNN(nn, brain, input);
     drawRays(rays, input.slice(0, RAY_ANGLES.length), out[0]);
     outs[0].style.transform = `translateX(${(out[0] * 50).toFixed(1)}%) scaleX(.08)`; // steer: a marker either side of centre
     outs[1].style.transform = `scaleX(${Math.max(0, out[1]).toFixed(3)})`;
