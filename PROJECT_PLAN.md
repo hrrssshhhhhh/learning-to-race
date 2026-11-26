@@ -76,7 +76,7 @@ Detailed documents:
   1. ~~Specialist vs generalist on 50 unseen tracks~~ *(generalist dropped; replaced by pre-trained vs random brains on 50 unseen tracks)*
   2. Cars vs bikes: who learns faster
   3. Transfer: does training on track A help on track B, and which corners still cause scrapes
-- [ ] **19. Launch.** All tests pass, a final walkthrough, deploy to Vercel (you set up the GitHub and Vercel accounts; I give you the commands).
+- [x] **19. Launch.** All tests pass, a final walkthrough, deploy to Vercel (you set up the GitHub and Vercel accounts; I give you the commands).
 
 ---
 
