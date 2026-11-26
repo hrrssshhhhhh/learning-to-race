@@ -17,6 +17,9 @@ export const DT = 1 / 60; // fixed timestep: results never depend on frame rate
 export const STALL_SECONDS = 2;
 export const MAX_GEN_SECONDS = 90; // cap so one good-but-endless circler cannot freeze evolution
 export const POP_SIZE = 100;
+// Default stop point, user-adjustable. Best fitness plateaus within ~20 generations on the default track
+// (measured for scripts/pretrain.ts), so 30 leaves headroom for harder drawn tracks.
+export const MAX_GENERATIONS = 30;
 
 export interface GenStats { generation: number; bestFitness: number; avgFitness: number; finishers: number; bestLapTicks: number | null }
 
@@ -25,6 +28,7 @@ export class Population {
   generation = 0;
   history: GenStats[] = [];
   firstLapGeneration: number | null = null;
+  recorded = false; // the finished generation's stats are in history (it is waiting at the generation limit)
   genTicks = 0; // ticks since this generation (or frozen attempt) started
   constructor(public kind: VehicleKind, public brains: Brain[], public label: string, public frozen: boolean, track: Track) {
     this.vehicles = brains.map(() => startVehicle(track));
@@ -33,7 +37,7 @@ export class Population {
 
 export interface WorldOptions {
   kinds: VehicleKind[]; seed: number; initialBrains?: Partial<Record<VehicleKind, Brain[]>>; frozen?: boolean;
-  contenders?: { label: string; kind: VehicleKind; brains: Brain[] }[];
+  contenders?: { label: string; kind: VehicleKind; brains: Brain[] }[]; maxGenerations?: number;
 }
 
 /** The start line IS checkpoint 0, so the first target is checkpoint 1; checkpoint 0 is only crossed to finish a lap. */
@@ -94,6 +98,7 @@ export function advanceCheckpoints(v: VehicleState, prevPos: Vec2, track: Track)
 export class World {
   populations: Population[] = [];
   tick = 0;
+  maxGenerations: number; // editable mid-run: raising it resumes a stopped population
   private rng: Rng;
   // Reused every vehicle step. sensorInputs and forward still return fresh arrays (their APIs); the rest is allocation-free.
   private prev: Vec2 = { x: 0, y: 0 };
@@ -101,6 +106,7 @@ export class World {
 
   constructor(public track: Track, opts: WorldOptions) {
     this.rng = makeRng(opts.seed);
+    this.maxGenerations = opts.maxGenerations ?? MAX_GENERATIONS;
     const frozen = opts.frozen ?? false;
     if (opts.contenders) {
       for (const c of opts.contenders) this.populations.push(new Population(c.kind, c.brains, c.label, frozen, track));
@@ -117,8 +123,12 @@ export class World {
   step(): ContactEvent[] {
     const events: ContactEvent[] = [];
     for (const pop of this.populations) {
-      if (pop.frozen && this.isAttemptOver(pop)) continue; // frozen: one attempt only, then stand still
-      if (!pop.frozen && this.isAttemptOver(pop)) this.evolve(pop);
+      if (this.isAttemptOver(pop)) {
+        if (pop.frozen) continue; // one attempt only, then stand still
+        if (!pop.recorded) this.record(pop);
+        if (pop.generation + 1 >= this.maxGenerations) continue; // limit reached: stand still
+        this.breed(pop);
+      }
       const spec = SPECS[pop.kind];
       for (let i = 0; i < pop.vehicles.length; i++) {
         const v = pop.vehicles[i];
@@ -141,18 +151,25 @@ export class World {
     return events;
   }
 
-  /** Records the finished generation, breeds the next one and puts everyone back on the start line. */
-  private evolve(pop: Population): void {
+  /** Records the finished generation's stats (once, even while it waits at the generation limit). */
+  private record(pop: Population): void {
     const fit = pop.vehicles.map(v => fitness(v, this.track));
     const laps = pop.vehicles.map(v => v.bestLapTicks).filter((t): t is number => t !== null);
     pop.history.push({
       generation: pop.generation, bestFitness: Math.max(...fit), avgFitness: fit.reduce((a, b) => a + b, 0) / fit.length,
       finishers: laps.length, bestLapTicks: laps.length ? Math.min(...laps) : null,
     });
+    pop.recorded = true;
+  }
+
+  /** Breeds the next generation and puts everyone back on the start line. */
+  private breed(pop: Population): void {
+    const fit = pop.vehicles.map(v => fitness(v, this.track));
     pop.brains = nextGeneration(pop.brains, fit, this.rng);
     pop.vehicles = pop.brains.map(() => startVehicle(this.track));
     pop.generation++;
     pop.genTicks = 0;
+    pop.recorded = false;
   }
 
   /** Index of the best vehicle by current fitness, preferring the living (camera follows it). */

@@ -3,7 +3,7 @@ import type { World } from '../sim/world';
 import type { CameraMode } from '../render3d/camera';
 import type { StartPoint } from '../storage/brains';
 
-export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint }
+export interface AppState { world: World; speed: number /* 1..10 */; view: '2d' | '3d'; camera: CameraMode; start: StartPoint; maxGen: number }
 
 export function mountControls(
   root: HTMLElement, training: HTMLElement, app: AppState, actions: { reset(): void; setKinds(k: VehicleKind[]): void; draw(): void; keep(): void; test(kind: VehicleKind): void; play(): void },
@@ -38,6 +38,9 @@ export function mountControls(
       <option value="mine">My vehicles</option>
       <option value="specialist">Pre-trained</option>
     </select>
+    <label for="max-gen" class="lbl">Stop after</label>
+    <input id="max-gen" class="btn fig" type="number" min="1" max="1000" step="1" value="${app.maxGen}" aria-describedby="max-gen-u">
+    <span id="max-gen-u" class="lbl">generations</span>
     <button type="button" class="btn" id="reset">Restart</button>
     <button type="button" class="btn" id="keep">Save vehicles</button>`;
   // view controls sit on the canvas (top right), next to what they change, so the bottom bar fits one row
@@ -56,6 +59,13 @@ export function mountControls(
   const start = training.querySelector<HTMLSelectElement>('#start')!;
   start.value = app.start; // applies to the next Restart or Race, not the run in progress
   start.addEventListener('change', () => { app.start = start.value as StartPoint; });
+  const maxGen = training.querySelector<HTMLInputElement>('#max-gen')!;
+  // applies to the run in progress too: raising it resumes a population that stopped at the old limit
+  maxGen.addEventListener('change', () => {
+    const n = Math.round(+maxGen.value);
+    if (!Number.isFinite(n) || n < 1) { maxGen.value = String(app.maxGen); return; }
+    maxGen.value = String(app.maxGen = app.world.maxGenerations = Math.min(1000, n));
+  });
   const view = viewbar.querySelector<HTMLFieldSetElement>('#view')!, cam = viewbar.querySelector<HTMLFieldSetElement>('#camera')!;
   // main changes view/camera too (Race swoops into 3D chase), so radios mirror app state rather than own it
   const sync = () => {

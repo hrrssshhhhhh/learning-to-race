@@ -18,7 +18,7 @@ import { mountLanding } from './ui/landing';
 import { StartLights } from './ui/lights';
 import type { Vec2 } from './sim/vec';
 import { LAYERS, createBrain, type Brain } from './ml/nn';
-import { POP_SIZE } from './sim/world';
+import { POP_SIZE, MAX_GENERATIONS } from './sim/world';
 import { makeRng } from './sim/rng';
 import { loadMyVehicles, loadShipped, saveMyVehicles, type StartPoint } from './storage/brains';
 
@@ -29,9 +29,9 @@ let key = trackKey(DEFAULT_TRACK), runStart: StartPoint = 'fresh';
 let testKind: VehicleKind | null = null; // set by "Test on new track": the next editor Race runs a test instead
 let testing = false; // the current world is a test (or continues one): not a from-scratch baseline
 const scratch = new Map<string, Partial<Record<VehicleKind, number>>>();
-const make = (kinds: VehicleKind[], initialBrains?: Partial<Record<VehicleKind, Brain[]>>) =>
-  new World(track, { kinds, seed: Date.now(), initialBrains });
-const app: AppState = { world: make(['car', 'bike']), speed: 1, view: '3d', camera: 'chase', start: 'fresh' };
+const make = (kinds: VehicleKind[], initialBrains?: Partial<Record<VehicleKind, Brain[]>>, maxGenerations?: number) =>
+  new World(track, { kinds, seed: Date.now(), initialBrains, maxGenerations });
+const app: AppState = { world: make(['car', 'bike']), speed: 1, view: '3d', camera: 'chase', start: 'fresh', maxGen: MAX_GENERATIONS };
 let kinds: VehicleKind[] = ['car', 'bike'];
 
 /** New run on the current track from the chosen starting point; any missing source falls back to fresh. */
@@ -45,7 +45,7 @@ async function restart(): Promise<void> {
   const ok = start !== 'fresh' && kinds.every((k) => brains[k]);
   if (start !== 'fresh' && !ok) hud.notify('No saved vehicles found — starting fresh');
   runStart = ok ? start : 'fresh'; testing = false; controls.setTesting(false);
-  app.world = make(kinds, ok ? brains : undefined);
+  app.world = make(kinds, ok ? brains : undefined, app.maxGen);
   hud.transfer = runStart === 'mine' ? (scratch.get(key) ?? {}) : null;
 }
 
@@ -123,7 +123,7 @@ async function startTest(kind: VehicleKind): Promise<void> {
   // Keep training: same track, same contenders with their current brains, each now evolving as its own population
   hud.onKeepTraining = () => {
     if (!app.world.populations[0]?.frozen) return;
-    app.world = new World(track, { kinds: [], seed: Date.now(), contenders: app.world.populations.map((p) => ({ label: p.label, kind: p.kind, brains: p.brains })) });
+    app.world = new World(track, { kinds: [], seed: Date.now(), maxGenerations: app.maxGen, contenders: app.world.populations.map((p) => ({ label: p.label, kind: p.kind, brains: p.brains })) });
   };
 }
 const editor = new Editor(root.querySelector<HTMLCanvasElement>('#editor')!, (control) => {

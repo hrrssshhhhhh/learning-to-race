@@ -1,4 +1,4 @@
-import { World, fitness, advanceCheckpoints, DT, STALL_SECONDS } from '../../src/sim/world';
+import { World, fitness, advanceCheckpoints, DT, STALL_SECONDS, MAX_GENERATIONS } from '../../src/sim/world';
 import { buildTrack } from '../../src/sim/track';
 import { DEFAULT_TRACK } from '../../src/sim/defaultTrack';
 import { CAR, newVehicleState, stepVehicle } from '../../src/sim/vehicle';
@@ -43,4 +43,12 @@ test('checkpoint crossings count only in the forward direction (no back-and-fort
   const osc = mk();
   for (let i = 0; i < 5; i++) { osc.pos = { ...behind }; advanceCheckpoints(osc, ahead, tr); osc.pos = { ...ahead }; advanceCheckpoints(osc, behind, tr); }
   expect(osc.checkpointsPassed).toBe(1);
+});
+test('training stops at MAX_GENERATIONS', () => {
+  const w = new World(buildTrack(DEFAULT_TRACK), { kinds: ['car'], seed: 1 });
+  const p = w.populations[0];
+  for (let i = 0; i < MAX_GENERATIONS + 5; i++) { p.vehicles.forEach(v => (v.alive = false)); w.step(); }
+  expect(p.generation).toBe(MAX_GENERATIONS - 1); expect(p.history).toHaveLength(MAX_GENERATIONS);
+  w.maxGenerations = MAX_GENERATIONS + 1; w.step(); // raising the limit resumes without double-recording
+  expect(p.generation).toBe(MAX_GENERATIONS); expect(p.history).toHaveLength(MAX_GENERATIONS);
 });
