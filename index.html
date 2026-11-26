@@ -88,6 +88,8 @@
   .training .lbl { color: var(--muted); font: 600 13px/1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
   .training select { flex: 1 1 calc(100% - 100px); }
   .training button { flex: 1 1 0; }
+  .training input[type=number] { width: 72px; }
+  .training #max-gen-u { flex: 1 1 auto; }
 
   /* each population is a tower row: position, team bar, name, then its numbers */
   .pops { margin-top: 16px; }
@@ -117,7 +119,7 @@
   .results { margin-top: 16px; padding: 12px; background: var(--carbon); border-left: 4px solid var(--red); }
   .results p { margin: 0 0 12px; font: 700 18px/24px var(--display); text-transform: uppercase; letter-spacing: .02em; }
   #panel canvas { display: block; width: 100%; }
-  #panel .chart { height: 150px; }
+  #panel .chart { height: 168px; }
   #panel .nn { height: 220px; }
 
   /* banner: first laps and notices, a broadcast caption */
@@ -157,6 +159,11 @@
   .hero-sub { margin: 0 0 32px; max-width: 34rem; color: var(--text-2); font-size: 18px; line-height: 28px; }
   .hero-sub b { font-weight: 600; }
   .c-car { color: var(--car); } .c-bike { color: var(--bike); }
+  .hero-figs { display: flex; gap: 0; margin: 0 0 32px; }
+  .hero-figs div { display: flex; flex-direction: column; gap: 6px; padding: 0 24px; border-left: 1px solid var(--line-strong); }
+  .hero-figs div:first-child { padding-left: 0; border-left: 0; }
+  .hero-figs dd { margin: 0; order: -1; font: italic 700 40px/1 var(--display); color: var(--text); }
+  .hero-figs dt { color: var(--muted); font: 600 13px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
   .hero-btn { height: 52px; padding: 0 28px; font-size: 19px; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
   .hero-cue { position: absolute; left: 40px; bottom: 32px; display: flex; align-items: center; gap: 12px; color: var(--muted); font: 600 14px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; }
@@ -164,7 +171,37 @@
   .hero-cue b { display: block; height: 100%; background: var(--red); transform-origin: left; transform: scaleX(0); }
   .hero-chequer { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; opacity: .9;
     background: repeating-conic-gradient(#fff 0 25%, #0b0b0f 0 50%) 0 0 / 12px 12px; } /* the chequered flag along the foot of the poster */
+  /* telemetry cards: what the project is made of, in the space the circuit leaves */
+  .hero-deck { position: absolute; inset: 0; pointer-events: none; }
+  .tele { position: absolute; width: 360px; padding: 12px 16px 14px; box-sizing: border-box; background: rgba(11,11,15,.84); border-top: 2px solid var(--red); }
+  .tele h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font: italic 700 15px/20px var(--display); letter-spacing: .06em; text-transform: uppercase; }
+  .tele h2::before { content: ""; width: 4px; height: 14px; background: var(--red); transform: skewX(-12deg); }
+  .tele h2 small { margin-left: auto; color: var(--muted); font: 600 13px/1 var(--display); font-style: normal; letter-spacing: .05em; }
+  .tele h2 small b { color: var(--text); font-weight: 600; }
+  .tele canvas { display: block; width: 100%; }
+  .tele-brain { top: 88px; right: 40px; width: 400px; }
+  .tele-nn { height: 176px; }
+  .tele-foot { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 14px; }
+  .tele-foot i { width: 3px; height: 3px; background: var(--muted); }
+  .tele-eyes { right: 416px; bottom: 44px; width: 280px; }
+  .tele-rays { height: 104px; }
+  .tele-eyes, .tele-evo { height: 204px; }
+  .tele-out { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; color: var(--muted); font-size: 13px; letter-spacing: .05em; text-transform: uppercase; }
+  .tele-out span { display: flex; flex-direction: column; gap: 6px; }
+  .bar { position: relative; display: block; height: 4px; background: var(--line-strong); overflow: hidden; }
+  .bar i { position: absolute; inset: 0; background: var(--text); transform-origin: left; }
+  .bar.mid i { background: var(--red-hi); transform-origin: center; }
+  .bar.mid::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+  .tele-evo { right: 40px; bottom: 44px; }
+  .tele-evo ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+  .tele-evo li { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; height: 26px; padding: 0 8px; color: var(--muted); font-size: 13px;
+    box-shadow: inset 2px 0 0 transparent; transition: background-color .3s var(--ease), color .3s var(--ease), box-shadow .3s var(--ease); }
+  .tele-evo li b { color: var(--text-2); font: italic 700 15px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; }
+  .tele-evo li.on { background: var(--row); color: var(--text-2); box-shadow: inset 2px 0 0 var(--red); }
+  .tele-evo li.on b { color: var(--text); }
   @media (max-width: 760px) {
+    .hero-figs dd { font-size: 32px; }
+    .hero-figs div { padding: 0 16px; }
     .hero-nav { padding: 16px 20px; }
     .hero-copy { left: 20px; right: 20px; padding-bottom: 10vh; }
     .hero-h1 { font-size: 64px; }

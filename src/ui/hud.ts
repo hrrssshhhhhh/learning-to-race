@@ -124,7 +124,7 @@ export class Hud {
       let lap: number | null = null;
       for (const t of [...p.history.map((g) => g.bestLapTicks), ...p.vehicles.map((v) => v.bestLapTicks)])
         if (t !== null && (lap === null || t < lap)) lap = t;
-      card.gen.textContent = String(p.generation + 1);
+      card.gen.textContent = `${p.generation + 1}/${w.maxGenerations}`;
       card.alive.textContent = `${p.vehicles.filter((v) => v.alive).length}/${p.vehicles.length}`;
       (card.alive.closest('.card')!.querySelector('.follow') as HTMLElement).textContent = i === this.focus ? 'Following' : 'Follow';
       card.cp.textContent = cps(lead.checkpointsPassed, n);
