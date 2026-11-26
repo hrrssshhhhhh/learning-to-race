@@ -5,6 +5,11 @@ import { validateTrack, buildTrack } from './track';
 const MAX_TRIES = 200;
 const MIN_CORNER = 12; // stricter than the validator's 9 m so learning targets stay reachable
 
+/** Shape knobs. NORMAL is what the app uses; HARD (experiments only) packs in more, tighter corners so learning takes long enough to measure. */
+export interface TrackStyle { minPoints: number; extraPoints: number; pinch: number; minCorner: number }
+export const NORMAL: TrackStyle = { minPoints: 8, extraPoints: 7, pinch: 0.18, minCorner: MIN_CORNER };
+export const HARD: TrackStyle = { minPoints: 14, extraPoints: 7, pinch: 0.4, minCorner: 9 };
+
 /** Gentle ellipse with a little radial jitter; far from any validity limit. */
 export function fallbackTrack(rng: Rng): Vec2[] {
   const a = 250 + rng() * 100, b = 150 + rng() * 60, n = 10;
@@ -24,8 +29,8 @@ export function curvatureRadii(c: Vec2[]): number[] {
   });
 }
 
-function candidate(rng: Rng): Vec2[] {
-  const n = 8 + Math.floor(rng() * 7);
+function candidate(rng: Rng, st: TrackStyle): Vec2[] {
+  const n = st.minPoints + Math.floor(rng() * st.extraPoints);
   // non-uniform angle gaps: wide gaps become long edges, narrow ones tight sections
   const gaps = Array.from({ length: n }, () => 0.4 + rng() * 1.2);
   const total = gaps.reduce((s, g) => s + g, 0);
@@ -35,7 +40,7 @@ function candidate(rng: Rng): Vec2[] {
     r += (rng() - 0.5) * (rng() < 0.3 ? 300 : 100);
     r = Math.min(450, Math.max(150, r));
     let rr = r;
-    if (rng() < 0.18) rr *= 0.4 + rng() * 0.3; // pinched point: hairpin / chicane
+    if (rng() < st.pinch) rr *= 0.4 + rng() * 0.3; // pinched point: hairpin / chicane
     pts.push({ x: rr * Math.cos(t), y: rr * Math.sin(t) });
     t += (2 * Math.PI * gaps[i]) / total;
   }
@@ -47,10 +52,10 @@ function candidate(rng: Rng): Vec2[] {
 }
 
 /** Valid closed-track control points: varied angle gaps and radii, pinched points and collinear runs. Retries until valid. */
-export function randomTrack(rng: Rng): Vec2[] {
+export function randomTrack(rng: Rng, st: TrackStyle = NORMAL): Vec2[] {
   for (let tries = 0; tries < MAX_TRIES; tries++) {
-    const pts = candidate(rng);
-    if (validateTrack(pts).ok && Math.min(...curvatureRadii(buildTrack(pts).center)) >= MIN_CORNER) return pts;
+    const pts = candidate(rng, st);
+    if (validateTrack(pts).ok && Math.min(...curvatureRadii(buildTrack(pts).center)) >= st.minCorner) return pts;
   }
   return fallbackTrack(rng);
 }

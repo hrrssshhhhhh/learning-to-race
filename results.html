@@ -28,6 +28,8 @@
     clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
   h1 { margin: 0 0 24px; font: italic 800 clamp(48px, 7vw, 88px)/.92 var(--display); text-transform: uppercase; }
   .lede { max-width: 40rem; margin: 0; color: var(--text-2); font-size: 19px; line-height: 30px; }
+  .lede em { font-style: normal; color: var(--text); }
+  .method, .small { max-width: 40rem; margin: 16px 0 0; color: var(--muted); font-size: 15px; line-height: 24px; }
 
   .exp { position: relative; padding: 64px 0 0; margin-top: 32px; border-top: 1px solid var(--line); }
   .num { margin: 0 0 4px; color: var(--red); font: italic 700 18px/1 var(--display); }
@@ -39,9 +41,10 @@
   .figs div:first-child { padding-left: 0; border-left: 0; }
   .figs b { font: italic 700 48px/1 var(--display); }
   .figs span { color: var(--muted); font: 600 14px/18px var(--display); letter-spacing: .04em; text-transform: uppercase; }
+  .figs small { color: var(--text-2); font: 600 14px/18px var(--display); font-variant-numeric: tabular-nums; }
 
   .chart { display: block; width: 100%; margin: 8px 0 0; }
-  .c1 { height: 280px; } .c2 { height: 168px; } .c3 { height: 480px; } .c4 { height: 300px; }
+  .c1 { height: 280px; } .c2 { height: 168px; } .c3 { height: 480px; } .c4 { height: 300px; } .c5 { height: 216px; }
   .legend { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; color: var(--text-2); font: 600 14px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; }
   .legend li { display: flex; align-items: center; gap: 8px; }
   .legend i { width: 10px; height: 10px; border-radius: 50%; }

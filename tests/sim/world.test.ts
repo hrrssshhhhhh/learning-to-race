@@ -52,3 +52,10 @@ test('training stops at MAX_GENERATIONS', () => {
   w.maxGenerations = MAX_GENERATIONS + 1; w.step(); // raising the limit resumes without double-recording
   expect(p.generation).toBe(MAX_GENERATIONS); expect(p.history).toHaveLength(MAX_GENERATIONS);
 });
+test('inputs option: brains are sized to the chosen sensors and still drive', () => {
+  const w = new World(buildTrack(DEFAULT_TRACK), { kinds: ['car'], seed: 1, inputs: [0, 3, 6, 7] });
+  const p = w.populations[0];
+  expect(p.brains[0].layers[0]).toBe(4);
+  for (let i = 0; i < 60; i++) w.step();
+  expect(p.vehicles.some(v => v.pos.x !== p.vehicles[0].pos.x || v.speed > 0)).toBe(true);
+});

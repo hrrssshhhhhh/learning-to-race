@@ -11,17 +11,18 @@ import { LAYERS, weightCount } from './ml/nn';
 import { DEFAULT_GA } from './ml/ga';
 import { RAY_ANGLES, RAY_LENGTH } from './sim/sensors';
 import { POP_SIZE } from './sim/world';
+import { mean, median, bootstrapCI, wilcoxon, fmtP } from './stats';
 
 type Kind = 'car' | 'bike';
+type Gen = number | null; // null = milestone not reached within the generation cap
+interface Milestones { first: Gen; half: Gen }
 interface Results {
   generated: string;
+  setup: { tracks: string; population: number; half: number; genCap: number; extraGens: number; cornerRadius: number; unseenTracks: number };
   exp1: { tracks: number; pretrained: Record<Kind, number[]>; fresh: Record<Kind, number[]> };
-  exp2: { tracks: number; cap: number; car: (number | null)[]; bike: (number | null)[] };
-  exp3: {
-    pairs: number; cap: number; extraGensOnA: number; cornerRadius: number;
-    fresh: (number | null)[]; transfer: (number | null)[];
-    corners: { radius: number; scrapes: number; crashes: number; tighterThanA: boolean }[];
-  };
+  exp2: { tracks: number } & Record<Kind, Milestones[]>;
+  exp3: { pairs: number; fresh: Milestones[]; transfer: Milestones[]; corners: { radius: number; scrapes: number; crashes: number; tighterThanA: boolean }[] };
+  exp4: { seeds: number; configs: Record<string, (Milestones & { unseen: number })[]> };
 }
 
 // Respect reduced-motion users: keep native scroll for them.
@@ -33,10 +34,7 @@ const NAME: Record<Kind, string> = { car: 'Cars', bike: 'Bikes' };
 const KINDS: Kind[] = ['car', 'bike'];
 const STACK = 7; // beeswarm slots per row (centre plus three each side) before a pile collapses to a count
 
-const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : NaN; };
-const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
 const pct = (v: number) => `${Math.round(v * 100)}%`;
-const done = (xs: (number | null)[]) => xs.filter((x): x is number => x !== null);
 
 /** Hover layer: every chart registers its marks; the nearest one within reach gets a tooltip. */
 const tip = document.createElement('div');
@@ -179,15 +177,33 @@ function table(head: string[], rows: (string | number)[][]): string {
 }
 
 function render(d: Results): void {
-  const e1 = d.exp1, e2 = d.exp2, e3 = d.exp3;
-  const faster = e3.fresh.filter((f, i) => (e3.transfer[i] ?? e3.cap + 1) < (f ?? e3.cap + 1)).length;
-  const ties = e3.fresh.filter((f, i) => (e3.transfer[i] ?? e3.cap + 1) === (f ?? e3.cap + 1)).length;
+  const { exp1: e1, exp2: e2, exp3: e3, exp4: e4, setup } = d, cap = setup.genCap;
+  const gen = (g: Gen) => g ?? cap + 1; // censored runs rank after every run that made it
+  const genTxt = (g: Gen) => (g === null ? `not within ${cap}` : String(g));
+  const range = ([lo, hi]: [number, number], f: (v: number) => string) => `95% CI ${f(lo)} to ${f(hi)}`;
+  const one = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+
+  // 01: completion on unseen tracks
+  const preCI = KINDS.map((k) => bootstrapCI(e1.pretrained[k]));
+  const e1test = wilcoxon([...e1.pretrained.car, ...e1.pretrained.bike], [...e1.fresh.car, ...e1.fresh.bike]);
+  // 02: cars vs bikes, paired by track
+  const half2 = (k: Kind) => e2[k].map((m) => gen(m.half)), first2 = (k: Kind) => e2[k].map((m) => gen(m.first));
+  const d2 = half2('car').map((v, i) => v - half2('bike')[i]), t2 = wilcoxon(half2('car'), half2('bike')), dCI2 = bootstrapCI(d2, median);
+  const md2 = median(d2);
+  const verdict2 = t2.p >= 0.05 ? `The difference is not statistically significant (${fmtP(t2.p)}): with ${e2.tracks} tracks, cars and bikes learn at about the same speed.`
+    : `${md2 > 0 ? 'Bikes' : 'Cars'} learn faster (${fmtP(t2.p)}). The network is identical, so the gap comes from how each vehicle handles.`;
+  // 03: transfer, paired by track pair
+  const hf = e3.fresh.map((m) => gen(m.half)), ht = e3.transfer.map((m) => gen(m.half));
+  const t3 = wilcoxon(hf, ht), d3 = hf.map((v, i) => v - ht[i]), dCI3 = bootstrapCI(d3, median);
+  const sooner = d3.filter((v) => v > 0).length, ties = d3.filter((v) => v === 0).length;
   const tight = e3.corners.filter((k) => k.tighterThanA), rest = e3.corners.filter((k) => !k.tighterThanA);
+  const crashes = (ks: typeof tight) => ks.reduce((n, k) => n + k.crashes, 0), allCrashes = crashes(e3.corners);
   const contacts = (ks: typeof tight) => mean(ks.map((k) => k.scrapes + k.crashes));
-  const crashes = (ks: typeof tight) => ks.reduce((n, k) => n + k.crashes, 0);
-  const [mc, mb] = KINDS.map((k) => median(done(e2[k])));
-  const quicker = mc === mb ? 'Neither kind is clearly quicker to learn.'
-    : `${mb < mc ? 'Bikes' : 'Cars'} usually get there a little sooner, which says more about their handling than their brains: the network is identical.`;
+  // 04: sensor ablation, paired by training track
+  const cfgs = Object.keys(e4.configs).sort((a, b) => +a - +b), full = cfgs.at(-1)!;
+  const unseen = (c: string) => e4.configs[c].map((r) => r.unseen), halfs = (c: string) => e4.configs[c].map((r) => gen(r.half));
+  const vsFull = Object.fromEntries(cfgs.filter((c) => c !== full).map((c) => [c, wilcoxon(unseen(c), unseen(full))]));
+
   const app = document.getElementById('app')!;
   app.innerHTML = `
   <header class="top"><a class="mark" href="./">Self-learning vehicles</a><a class="back" href="./">Back to the race</a></header>
@@ -195,17 +211,20 @@ function render(d: Results): void {
     <section class="intro">
       <p class="tag">Results</p>
       <h1>What the vehicles learned</h1>
-      <p class="lede">Three experiments, all run headless with the same simulation the browser uses. Every run is seeded, so
-        <code>npm run experiments</code> reproduces these numbers. Data generated ${d.generated}.</p>
+      <p class="lede">Four experiments, run headless with the same simulation the browser uses, on a harder family of random tracks than the app's
+        (more and tighter corners). A population counts as having <em>learned</em> a track when half of it (${setup.half} of ${setup.population}) completes a lap
+        in one generation. Every run is seeded, so <code>npm run experiments</code> reproduces these numbers. Data generated ${d.generated}.</p>
+      <p class="method">Intervals are 95% bootstrap confidence intervals. Paired comparisons use the Wilcoxon signed-rank test (two-sided).
+        Runs that miss a milestone within ${cap} generations are ranked last.</p>
     </section>
 
     <section class="exp" aria-labelledby="e1">
       <p class="num fig">01</p>
       <h2 id="e1">Does pre-training carry over to tracks it has never seen?</h2>
-      <p>The shipped pre-trained population learned on the default track only. Here it gets one attempt on ${e1.tracks} random tracks
+      <p>The shipped pre-trained population learned on the default track only. Here it gets one attempt on ${e1.tracks} hard random tracks
         it has never seen, next to ${POP_SIZE} random brains on the same tracks. Each dot is one track: the share of the population that completed a lap.</p>
-      <div class="figs">${KINDS.map((k) => `<div><b class="fig">${pct(mean(e1.pretrained[k]))}</b><span>${NAME[k].toLowerCase()} pre-trained, mean completion</span></div>`).join('')}
-        <div><b class="fig">${pct(mean([...e1.fresh.car, ...e1.fresh.bike]))}</b><span>random brains, mean completion</span></div></div>
+      <div class="figs">${KINDS.map((k, i) => `<div><b class="fig">${pct(mean(e1.pretrained[k]))}</b><span>${NAME[k].toLowerCase()} pre-trained, mean completion</span><small>${range(preCI[i], pct)}</small></div>`).join('')}
+        <div><b class="fig">${pct(mean([...e1.fresh.car, ...e1.fresh.bike]))}</b><span>random brains, mean completion</span><small>${fmtP(e1test.p)} vs pre-trained</small></div></div>
       <canvas class="chart c1" role="img" aria-label="Completion rate per unseen track, pre-trained vs random brains, for cars and bikes"></canvas>
       <ul class="legend"><li><i style="background:${COLORS.car}"></i>Pre-trained cars</li><li><i style="background:${COLORS.bike}"></i>Pre-trained bikes</li><li><i style="background:${BASELINE}"></i>Random brains</li><li><i class="tick"></i>Median</li></ul>
       ${table(['Track', 'Cars pre-trained', 'Cars random', 'Bikes pre-trained', 'Bikes random'],
@@ -215,34 +234,47 @@ function render(d: Results): void {
     <section class="exp" aria-labelledby="e2">
       <p class="num fig">02</p>
       <h2 id="e2">Who learns faster, cars or bikes?</h2>
-      <p>Both start from random brains on the same ${e2.tracks} random tracks with the same seeds. Each dot is one track: the generation in which
-        the first vehicle completed a lap. ${quicker}</p>
-      <div class="figs">${KINDS.map((k) => `<div><b class="fig">${median(done(e2[k]))}</b><span>${NAME[k].toLowerCase()}, median generation to a first lap</span></div>`).join('')}
-        <div><b class="fig">${KINDS.map((k) => done(e2[k]).length).join(' · ')}</b><span>of ${e2.tracks} tracks lapped within ${e2.cap} generations, cars · bikes</span></div></div>
-      <canvas class="chart c2" role="img" aria-label="Generations to a first lap per track, cars vs bikes"></canvas>
-      <ul class="legend"><li><i style="background:${COLORS.car}"></i>Cars</li><li><i style="background:${COLORS.bike}"></i>Bikes</li><li><i class="tick"></i>Median</li>${KINDS.some((k) => e2[k].includes(null)) ? `<li><i class="ring"></i>Did not lap within ${e2.cap} generations</li>` : ''}</ul>
-      ${table(['Track', 'Cars', 'Bikes'], e2.car.map((_, i) => [i + 1, e2.car[i] ?? 'did not lap', e2.bike[i] ?? 'did not lap']))}
+      <p>Both start from random brains on the same ${e2.tracks} tracks with the same seeds. Each dot is one track: the generation in which half the
+        population first completed a lap. ${verdict2}</p>
+      <div class="figs">${KINDS.map((k) => `<div><b class="fig">${one(median(half2(k)))}</b><span>${NAME[k].toLowerCase()}, median generation to learn a track</span><small>first lap: median ${one(median(first2(k)))}</small></div>`).join('')}
+        <div><b class="fig">${md2 > 0 ? '+' : ''}${one(md2)}</b><span>median difference, cars minus bikes</span><small>${range(dCI2, one)} · ${fmtP(t2.p)}</small></div></div>
+      <canvas class="chart c2" role="img" aria-label="Generations until half the population laps, per track, cars vs bikes"></canvas>
+      <ul class="legend"><li><i style="background:${COLORS.car}"></i>Cars</li><li><i style="background:${COLORS.bike}"></i>Bikes</li><li><i class="tick"></i>Median</li>${KINDS.some((k) => e2[k].some((m) => m.half === null)) ? `<li><i class="ring"></i>Not within ${cap} generations</li>` : ''}</ul>
+      ${table(['Track', 'Cars: first lap', 'Cars: half lap', 'Bikes: first lap', 'Bikes: half lap'], e2.car.map((c, i) => [i + 1, genTxt(c.first), genTxt(c.half), genTxt(e2.bike[i].first), genTxt(e2.bike[i].half)]))}
     </section>
 
     <section class="exp" aria-labelledby="e3">
       <p class="num fig">03</p>
       <h2 id="e3">Does learning one track help on the next?</h2>
-      <p>Cars evolve on track A until their first lap, plus ${e3.extraGensOnA} more generations. That population then moves to a new track B and keeps
-        evolving, next to random brains starting on B. ${e3.pairs} pairs of random tracks.</p>
-      <div class="figs"><div><b class="fig">${faster}/${e3.pairs}</b><span>pairs where the trained cars lapped B sooner</span></div>
-        <div><b class="fig">${ties}</b><span>ties</span></div>
-        <div><b class="fig">${median(done(e3.transfer))} vs ${median(done(e3.fresh))}</b><span>median generation to a first lap on B, trained vs from scratch</span></div></div>
-      <canvas class="chart c3" role="img" aria-label="Generations to a first lap on track B per pair, from scratch vs after training on track A"></canvas>
+      <p>Cars learn track A, then train ${setup.extraGens} more generations. That population moves to a new track B and keeps evolving, next to random brains
+        starting on B. ${e3.pairs} pairs of tracks. Each row is one pair: generations until half the population laps B.</p>
+      <div class="figs"><div><b class="fig">${sooner}/${e3.pairs}</b><span>pairs where the trained cars learned B sooner</span><small>${ties} ties</small></div>
+        <div><b class="fig">${one(median(ht))} vs ${one(median(hf))}</b><span>median generation to learn B, trained vs from scratch</span></div>
+        <div><b class="fig">${one(median(d3))}</b><span>median generations saved</span><small>${range(dCI3, one)} · ${fmtP(t3.p)}</small></div></div>
+      <canvas class="chart c3" role="img" aria-label="Generations until half the population laps track B, per pair, from scratch vs after training on track A"></canvas>
       <ul class="legend"><li><i style="background:${BASELINE}"></i>From scratch on B</li><li><i style="background:${COLORS.car}"></i>After training on A</li></ul>
-      <h3>Which corners still cause scrapes</h3>
-      <p>Every corner of B (tighter than a ${e3.cornerRadius} m radius), with the wall contacts the trained cars made there on their first attempt.
-        Red corners are tighter than anything on A. ${crashes(rest) === 0 && crashes(tight) > 0
-          ? `All ${crashes(tight)} crash contacts happened there; corners A had already taught drew none.`
-          : `They drew ${crashes(tight)} crash contacts, against ${crashes(rest)} at corners A had already taught.`}
-        Scrapes are spread across both (${contacts(tight).toFixed(1)} vs ${contacts(rest).toFixed(1)} contacts per corner on average).</p>
+      <h3>Which corners still cause trouble</h3>
+      <p>Every corner of B (tighter than a ${setup.cornerRadius} m radius), with the wall contacts the trained cars made there on their first attempt.
+        Red corners are tighter than anything on A: they are ${pct(tight.length / (e3.corners.length || 1))} of all corners and drew
+        ${allCrashes ? pct(crashes(tight) / allCrashes) : 'none'} of the ${allCrashes} crash contacts.
+        Contacts per corner, scrapes included: ${contacts(tight).toFixed(1)} at red corners, ${contacts(rest).toFixed(1)} elsewhere.</p>
       <canvas class="chart c4" role="img" aria-label="Wall contacts per corner of track B by corner radius; corners tighter than any on track A highlighted"></canvas>
       <ul class="legend"><li><i style="background:${RED}"></i>Tighter than any corner on A (${tight.length})</li><li><i class="ring"></i>Within what A taught (${rest.length})</li></ul>
-      ${table(['Pair', 'From scratch', 'After A'], e3.fresh.map((f, i) => [i + 1, f ?? 'did not lap', e3.transfer[i] ?? 'did not lap']))}
+      ${table(['Pair', 'From scratch', 'After A'], e3.fresh.map((f, i) => [i + 1, genTxt(f.half), genTxt(e3.transfer[i].half)]))}
+    </section>
+
+    <section class="exp" aria-labelledby="e4">
+      <p class="num fig">04</p>
+      <h2 id="e4">How much does each sensor matter?</h2>
+      <p>The same experiment with fewer eyes: networks that see ${cfgs.join(', ')} of the ${RAY_ANGLES.length} rays (plus speed). Each learns one track
+        (${e4.seeds} training tracks, shared across settings), trains ${setup.extraGens} more generations, then gets one attempt on each of ${setup.unseenTracks} tracks
+        it has never seen. Each dot is one training track: the mean completion on the unseen ones.</p>
+      <div class="figs">${cfgs.map((c) => `<div><b class="fig">${pct(mean(unseen(c)))}</b><span>${c} rays, completion on unseen tracks</span><small>${c === full ? range(bootstrapCI(unseen(c)), pct) : `${fmtP(vsFull[c].p)} vs ${full} rays`}</small></div>`).join('')}</div>
+      <canvas class="chart c5" role="img" aria-label="Completion on unseen tracks per training track, by number of sensor rays"></canvas>
+      <ul class="legend"><li><i style="background:${COLORS.car}"></i>Mean over ${setup.unseenTracks} unseen tracks</li><li><i class="tick"></i>Median</li></ul>
+      ${table(['Training track', ...cfgs.flatMap((c) => [`${c} rays: learned in`, `${c} rays: unseen`])],
+        Array.from({ length: e4.seeds }, (_, i) => [i + 1, ...cfgs.flatMap((c) => [genTxt(e4.configs[c][i].half), pct(e4.configs[c][i].unseen)])]))}
+      <p class="small">Median generations to learn the training track: ${cfgs.map((c) => `${c} rays ${one(median(halfs(c)))}`).join(', ')}.</p>
     </section>
 
     <section class="how" aria-labelledby="how">
@@ -255,9 +287,10 @@ function render(d: Results): void {
         <div><h3>Genetic algorithm</h3><p>No gradients and no labelled data. Each generation, ${POP_SIZE} vehicles drive and are scored on distance, lap time and damage.
           The top ${DEFAULT_GA.eliteCount} survive unchanged; the rest are bred from tournament winners (${DEFAULT_GA.tournamentSize} at a time) and ${Math.round(DEFAULT_GA.mutationRate * 100)}% of their weights mutated.</p></div>
       </div>
-      <p class="why">Why transfer works at all: because the sensors are local, a brain never learns <em>this track</em>. It learns how to react to
-        walls at a given distance and speed, and a left-hander on track B looks the same as one on A. Where it still slips is a corner tighter
-        than anything it has met, which is where the red corners above drew their crashes.</p>
+      <p class="why">Why transfer can work at all: the sensors are local, so a brain never learns <em>this track</em>. It learns how to react to
+        walls at a given distance and speed, and a left-hander on track B looks the same as one on A. Experiments 01 and 03 test that idea;
+        the red corners show where it stops holding.</p>
+      <p class="method">The full write-up, with method and limitations, is <code>docs/report.md</code> in the repository.</p>
     </section>
   </main>`;
   app.append(tip);
@@ -268,21 +301,28 @@ function render(d: Results): void {
       { label: `${NAME[k]} pre-trained`, color: COLORS[k], values: e1.pretrained[k], fmt: pct },
       { label: `${NAME[k]} random`, color: BASELINE, values: e1.fresh[k], fmt: pct },
     ]), { max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], fmt: pct });
-    const gmax = Math.max(5, ...done([...e2.car, ...e2.bike]));
-    const gstep = gmax > 20 ? 5 : gmax > 10 ? 2 : 1;
+    const reached = (k: Kind) => e2[k].map((m) => m.half).filter((g): g is number => g !== null);
+    const gmax = Math.max(5, ...KINDS.flatMap(reached)), gstep = gmax > 20 ? 5 : gmax > 10 ? 2 : 1;
     stripChart(q('.c2'), KINDS.map((k) => ({
-      label: NAME[k], color: COLORS[k], values: done(e2[k]), dnf: e2[k].length - done(e2[k]).length,
-      fmt: (v: number) => `generation ${v}`,
-    })), { grid: true, max: gmax, ticks: Array.from({ length: Math.floor(gmax / gstep) + 1 }, (_, i) => i * gstep).filter((v) => v > 0), fmt: String, dnfLabel: 'did not lap' });
-    pairsChart(q('.c3'), e3.fresh, e3.transfer, e3.cap);
-    cornersChart(q('.c4'), e3.corners, e3.cornerRadius);
+      label: NAME[k], color: COLORS[k], values: reached(k), dnf: e2.tracks - reached(k).length, fmt: (v: number) => `generation ${v}`,
+    })), { max: gmax, ticks: Array.from({ length: Math.floor(gmax / gstep) + 1 }, (_, i) => i * gstep), fmt: String, dnfLabel: `not in ${cap}` });
+    pairsChart(q('.c3'), e3.fresh.map((m) => m.half), e3.transfer.map((m) => m.half), cap);
+    cornersChart(q('.c4'), e3.corners, setup.cornerRadius);
+    stripChart(q('.c5'), cfgs.map((c) => ({ label: `${c} rays`, color: COLORS.car, values: unseen(c), fmt: pct })), { max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], fmt: pct });
   };
   void document.fonts.ready.then(draw);
   let raf = 0;
   addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
 }
 
+const fail = (msg: string) => { document.getElementById('app')!.innerHTML = `<main><section class="intro"><p class="lede">${msg}</p></section></main>`; };
 fetch(`${import.meta.env.BASE_URL}results/experiments.json`)
-  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-  .then(render)
-  .catch(() => { document.getElementById('app')!.innerHTML = '<main><p class="lede">No results yet. Run <code>npm run experiments</code> to generate them.</p></main>'; });
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+  .then(
+    (d: Results) => {
+      // a results file from an older version of the experiments has a different shape; say so instead of half-rendering
+      if (!d.setup || !d.exp4) return fail('These results were generated by an older version of the experiments. Run <code>npm run experiments</code> to regenerate them.');
+      try { render(d); } catch (e) { console.error(e); fail('The results could not be displayed. See the browser console for details.'); }
+    },
+    () => fail('No results yet. Run <code>npm run experiments</code> to generate them.'),
+  );

@@ -49,18 +49,19 @@ npm run dev            # the app at http://localhost:5173
 npm test               # unit tests, plus the learning-speed checks
 npm run build          # typecheck and production build
 npm run pretrain       # re-train the shipped population (about 2 min)
-npm run experiments    # re-run the experiments behind the Results page
+npm run experiments    # re-run the experiments behind the Results page (~35 min)
 ```
 
 ## Results
 
-Three experiments, run headless with the same simulation as the browser (`npm run experiments`, about 20 minutes). The full charts and data are on the [Results page](results.html).
+Four experiments, run headless with the same simulation as the browser on a harder family of random tracks (`npm run experiments`, about 35 minutes on 8 cores). A population has *learned* a track when half of it laps in one generation. Intervals are 95% bootstrap confidence intervals; paired comparisons use the Wilcoxon signed-rank test. Charts and per-run data are on the [Results page](results.html); method, discussion and limitations are in the [report](docs/report.md).
 
 | Question | Result |
 |---|---|
-| Does pre-training carry over to unseen tracks? | Trained on the default track only, the shipped population completes a lap on **62%** of attempts across 50 tracks it has never seen (cars and bikes alike). Random brains: **0%**. |
-| Who learns faster from scratch? | On 20 random tracks, **bikes** reach a first lap in a median of **generation 2**, cars in **generation 3**. Both lapped every track. |
-| Does learning one track help on the next? | Cars trained on track A lapped a new track B **in their first generation on all 20 pairs**, against a median of generation 2 from scratch (18 sooner, 2 ties). |
-| Which corners still cause trouble? | Every crash on track B came at a corner tighter than anything on track A; corners A had already taught drew no crashes. |
+| Does pre-training carry over to unseen tracks? | Trained on the default track only, pre-trained cars complete a lap on **59%** of attempts across 50 unseen tracks (95% CI 58–59%), bikes **55%** (55–56%). Random networks: **0%** (p < 0.001). |
+| Who learns faster, cars or bikes? | No significant difference: median **10** vs **9** generations to learn a track across 30 paired tracks (p = 0.345). |
+| Does learning one track help on the next? | Yes, strongly: after learning track A, cars learn a new track B in a median of **1** generation instead of **11.5** from scratch, sooner on **20 of 20** pairs (median saving 10.5, 95% CI 7.5–13, p < 0.001). |
+| Where does transfer fail? | Corners tighter than anything on track A are 11% of corners but drew **35%** of the crashes. |
+| How much does each sensor matter? | Completion on unseen tracks: 3 rays **37%**, 5 rays **50%**, 7 rays **45%**. Three rays also learn far slower (median 35.5 vs 9.5 generations). 3 vs 7: p = 0.053, suggestive only; 5 rays match 7. |
 
-Why transfer works: the sensors are local, so a brain never learns a track. It learns how to react to walls at a given distance and speed, and that carries to any track whose corners it has already met.
+Why transfer works: the sensors are local, so a network never learns a track. It learns how to react to walls at a given distance and speed, which carries to any track whose corners it has already met.

@@ -38,6 +38,8 @@ export class Population {
 export interface WorldOptions {
   kinds: VehicleKind[]; seed: number; initialBrains?: Partial<Record<VehicleKind, Brain[]>>; frozen?: boolean;
   contenders?: { label: string; kind: VehicleKind; brains: Brain[] }[]; maxGenerations?: number;
+  /** Ablation: which sensor inputs the network sees (indices into sensorInputs). Default: all of them. */
+  inputs?: number[];
 }
 
 /** The start line IS checkpoint 0, so the first target is checkpoint 1; checkpoint 0 is only crossed to finish a lap. */
@@ -99,6 +101,7 @@ export class World {
   populations: Population[] = [];
   tick = 0;
   maxGenerations: number; // editable mid-run: raising it resumes a stopped population
+  private inputs?: number[];
   private rng: Rng;
   // Reused every vehicle step. sensorInputs and forward still return fresh arrays (their APIs); the rest is allocation-free.
   private prev: Vec2 = { x: 0, y: 0 };
@@ -107,12 +110,14 @@ export class World {
   constructor(public track: Track, opts: WorldOptions) {
     this.rng = makeRng(opts.seed);
     this.maxGenerations = opts.maxGenerations ?? MAX_GENERATIONS;
+    this.inputs = opts.inputs;
+    const layers = opts.inputs ? [opts.inputs.length, ...LAYERS.slice(1)] : LAYERS;
     const frozen = opts.frozen ?? false;
     if (opts.contenders) {
       for (const c of opts.contenders) this.populations.push(new Population(c.kind, c.brains, c.label, frozen, track));
     } else {
       for (const kind of opts.kinds) {
-        const brains = opts.initialBrains?.[kind] ?? Array.from({ length: POP_SIZE }, () => createBrain(LAYERS, this.rng));
+        const brains = opts.initialBrains?.[kind] ?? Array.from({ length: POP_SIZE }, () => createBrain(layers, this.rng));
         this.populations.push(new Population(kind, brains, kind, frozen, track));
       }
     }
@@ -133,7 +138,8 @@ export class World {
       for (let i = 0; i < pop.vehicles.length; i++) {
         const v = pop.vehicles[i];
         if (!v.alive) continue;
-        const out = forward(pop.brains[i], sensorInputs(v, spec, this.track));
+        const all = sensorInputs(v, spec, this.track);
+        const out = forward(pop.brains[i], this.inputs ? this.inputs.map((k) => all[k]) : all);
         this.prev.x = v.pos.x; this.prev.y = v.pos.y;
         this.controls.steer = out[0]; this.controls.throttle = out[1];
         stepVehicle(v, spec, this.controls, DT);
